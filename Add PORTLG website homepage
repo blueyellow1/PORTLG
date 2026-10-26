@@ -1,0 +1,134 @@
+
+const CONTRACT_ADDRESS = "";
+// Insert verified deployed PORTLGuardLite address above.
+
+const CHAIN_ID = 420420777n;
+const RPC_URL = "https://test-evm-rpc-v3.portaldot.dev";
+const EXPLORER = "https://scanner-testnet-v3.portaldot.dev";
+
+const ABI = [
+  "function owner() view returns (address)",
+  "function paused() view returns (bool)",
+  "function pause()",
+  "function unpause()",
+  "function protectedAction()"
+];
+
+let provider;
+let signer;
+let contract;
+let wallet;
+
+const $ = id => document.getElementById(id);
+
+function setStatus(message) {
+  $("txStatus").textContent = message;
+}
+
+function setButtons(owner, paused) {
+  const isOwner =
+    wallet.toLowerCase() === owner.toLowerCase();
+
+  $("pauseBtn").disabled = !isOwner || paused;
+  $("unpauseBtn").disabled = !isOwner || !paused;
+  $("actionBtn").disabled = paused;
+}
+
+async function refreshStatus() {
+  const owner = await contract.owner();
+  const paused = await contract.paused();
+
+  $("contractStatus").textContent =
+    paused ? "🔴 Paused" : "🟢 Active";
+
+  $("ownerAddress").textContent = "Owner: " + owner;
+  setButtons(owner, paused);
+}
+
+async function connectWallet() {
+  try {
+    if (!window.ethereum) {
+      throw new Error("Please install MetaMask.");
+    }
+
+    if (!ethers.isAddress(CONTRACT_ADDRESS)) {
+      throw new Error("Verified contract address is missing.");
+    }
+
+    provider = new ethers.BrowserProvider(window.ethereum);
+
+    await provider.send("eth_requestAccounts", []);
+
+    const network = await provider.getNetwork();
+
+    if (network.chainId !== CHAIN_ID) {
+      throw new Error("Select Portaldot V3 Testnet in MetaMask.");
+    }
+
+    signer = await provider.getSigner();
+    wallet = await signer.getAddress();
+
+    contract = new ethers.Contract(
+      CONTRACT_ADDRESS,
+      ABI,
+      signer
+    );
+
+    const code = await provider.getCode(CONTRACT_ADDRESS);
+
+    if (code === "0x") {
+      throw new Error("No contract code found at this address.");
+    }
+
+    $("walletAddress").textContent = wallet;
+
+    await refreshStatus();
+    setStatus("Wallet connected successfully.");
+  } catch (error) {
+    setStatus(error.shortMessage || error.message);
+  }
+}
+
+async function sendTransaction(functionName) {
+  try {
+    if (!contract) {
+      throw new Error("Connect your wallet first.");
+    }
+
+    setStatus("Waiting for MetaMask confirmation...");
+    $("txLink").hidden = true;
+
+    const tx = await contract[functionName]();
+
+    setStatus("Transaction submitted: " + tx.hash);
+
+    $("txLink").href = EXPLORER + "/tx/" + tx.hash;
+    $("txLink").hidden = false;
+
+    const receipt = await tx.wait();
+
+    if (receipt.status !== 1) {
+      throw new Error("Transaction failed.");
+    }
+
+    setStatus("Transaction confirmed: " + tx.hash);
+    await refreshStatus();
+  } catch (error) {
+    setStatus(error.shortMessage || error.message);
+  }
+}
+
+$("connectBtn").onclick = connectWallet;
+$("pauseBtn").onclick = () => sendTransaction("pause");
+$("unpauseBtn").onclick = () => sendTransaction("unpause");
+$("actionBtn").onclick = () => sendTransaction("protectedAction");
+
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", () => {
+    location.reload();
+  });
+
+  window.ethereum.on("chainChanged", () => {
+    location.reload();
+  });
+}
