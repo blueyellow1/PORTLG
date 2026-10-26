@@ -1,6 +1,5 @@
 
 const CONTRACT_ADDRESS = "0x44406CD3e7ccE420c316D015FEE74303F16629E5";
-// Weka address ya PORTLGuardLite iliyothibitishwa hapa.
 
 const CHAIN_ID = 420420777n;
 const EXPLORER = "https://scanner-testnet-v3.portaldot.dev";
