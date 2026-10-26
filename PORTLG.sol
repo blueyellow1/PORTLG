@@ -1,10 +1,5 @@
-Remix
-AI
-Code
-1
-File explorer
-1234567891011121314151617181920212223242526
-// SPDX-License-Identifier: MIT
+
+ // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 contract PORTLGuardLite {
@@ -15,12 +10,37 @@ contract PORTLGuardLite {
     event Paused(address indexed by);
     event Unpaused(address indexed by);
 
-address
-contracts/portlg.sol 8:17
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not authorized");
+        _;
+    }
 
-AI tools
-AI copilot
+    modifier whenNotPaused() {
+        require(!paused, "Contract is paused");
+        _;
+    }
 
-Scam Alert
-Initialize as git repo
-RemixAI Copilot (enabled)
+    constructor() {
+        owner = msg.sender;
+    }
+
+    function pause() external onlyOwner {
+        require(!paused, "Already paused");
+        paused = true;
+        emit Paused(msg.sender);
+    }
+
+    function unpause() external onlyOwner {
+        require(paused, "Not paused");
+        paused = false;
+        emit Unpaused(msg.sender);
+    }
+
+    function protectedAction() external whenNotPaused {
+        emit SecurityAlert(
+            msg.sender,
+            "Protected action executed"
+        );
+    }
+}
+
