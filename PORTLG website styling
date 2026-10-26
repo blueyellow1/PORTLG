@@ -1,0 +1,88 @@
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b1020;
+  color: #ffffff;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: #141e35;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+header h2 {
+  color: #4dd8e3;
+  margin: 0;
+}
+
+header span {
+  color: #b9c8e3;
+}
+
+main {
+  max-width: 850px;
+  margin: auto;
+  padding: 35px 20px;
+}
+
+h1 {
+  font-size: 32px;
+}
+
+h1 + p {
+  color: #b9c8e3;
+}
+
+.panel {
+  background: #18263e;
+  border: 1px solid #2a3e60;
+  border-radius: 14px;
+  padding: 24px;
+  margin-top: 24px;
+}
+
+button {
+  background: #4dd8e3;
+  color: #081325;
+  padding: 12px 18px;
+  margin: 6px 6px 6px 0;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: #8cebf1;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#walletAddress,
+#ownerAddress,
+#txStatus {
+  overflow-wrap: anywhere;
+}
+
+#txLink {
+  color: #4dd8e3;
+}
+
+footer {
+  text-align: center;
+  color: #9baecb;
+  padding: 25px;
+}
