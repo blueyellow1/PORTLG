@@ -2,33 +2,152 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PORTLG Security</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PORTLG | Smart Contract Security</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #0b1220;
+      color: white;
+      text-align: center;
+    }
+    header { background: #15243d; padding: 20px; }
+    main { max-width: 650px; margin: 35px auto; padding: 15px; }
+    .panel {
+      background: #192943;
+      padding: 24px;
+      margin: 18px 0;
+      border-radius: 12px;
+    }
+    button {
+      background: #20a8e0;
+      color: white;
+      padding: 12px 18px;
+      border: none;
+      border-radius: 8px;
+      margin: 6px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .4; cursor: not-allowed; }
+    #txStatus, #walletAddress { overflow-wrap: anywhere; }
+    a { color: #6dd7ff; }
+    footer { padding: 25px; color: #aab6c9; }
+
+    /* ---------- Alert monitor ---------- */
+    #alertBanner {
+      position: sticky; top: 0; z-index: 10;
+      display: none; padding: 14px 16px;
+      background: #c0392b; color: #fff; font-weight: bold;
+      cursor: pointer;
+    }
+    #alertBanner.medium { background: #d68910; }
+    .live { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+            background: #2ecc71; margin-right: 6px; }
+    .live.off { background: #7f8c8d; }
+    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
+    .settings label { font-size: 13px; color: #aab6c9; display: block; }
+    .settings input, .settings textarea {
+      width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px;
+      border-radius: 6px; border: 1px solid #2c4166; background: #0f1b30; color: #fff;
+    }
+    .settings .full { grid-column: 1 / -1; }
+    #alertLog { list-style: none; padding: 0; margin: 12px 0 0; text-align: left; max-height: 360px; overflow-y: auto; }
+    #alertLog li { padding: 10px; margin-bottom: 8px; border-radius: 8px; background: #0f1b30;
+                   border-left: 5px solid #7f8c8d; font-size: 13px; overflow-wrap: anywhere; }
+    #alertLog li.high { border-left-color: #e74c3c; }
+    #alertLog li.medium { border-left-color: #f39c12; }
+    #alertLog li.low { border-left-color: #3498db; }
+    .sev { font-weight: bold; text-transform: uppercase; margin-right: 6px; }
+    .small { font-size: 13px; color: #aab6c9; }
+  </style>
 </head>
 <body>
-  <h1>PORTLG Security</h1>
+  <div id="alertBanner" role="alert"></div>
 
-  <p id="contractStatus">Checking contract status...</p>
-  <p id="ownerAddress">Owner: —</p>
-  <p id="walletAddress">Wallet not connected</p>
+  <header>
+    <h2>🛡️ PORTLG</h2>
+    <p>Portaldot V3 Testnet</p>
+  </header>
 
-  <button id="connectBtn">Connect MetaMask</button>
-  <button id="pauseBtn" disabled>Pause</button>
-  <button id="unpauseBtn" disabled>Unpause</button>
-  <button id="actionBtn" disabled>Protected Action</button>
+  <main>
+    <h1>Smart Contract Security Guardrail</h1>
+    <p>Emergency controls for blockchain operations.</p>
 
-  <p id="txStatus">Connect your wallet to begin.</p>
-  <a id="txLink" href="#" target="_blank" rel="noopener noreferrer" hidden>
-    View transaction
-  </a>
+    <section class="panel">
+      <h2>Wallet Connection</h2>
+      <button id="connectBtn">Connect MetaMask</button>
+      <p id="walletAddress">Wallet not connected</p>
+    </section>
+
+    <section class="panel">
+      <h2>Contract Status</h2>
+      <p id="contractStatus">Not connected</p>
+      <p id="ownerAddress"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Security Controls</h2>
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="unpauseBtn" disabled>Unpause</button>
+      <button id="actionBtn" disabled>Protected Action</button>
+    </section>
+
+    <section class="panel">
+      <h2>Transaction Activity</h2>
+      <p id="txStatus">No transaction submitted</p>
+      <a id="txLink" target="_blank" rel="noopener" hidden>
+        View Transaction
+      </a>
+    </section>
+
+    <section class="panel">
+      <h2>🚨 Suspicious Transaction Alerts</h2>
+      <p><span id="liveDot" class="live off"></span><span id="monitorStatus">Starting monitor...</span></p>
+      <p class="small">Watches every new block on Portaldot V3 Testnet (no wallet needed) and flags suspicious sends and withdrawals.</p>
+
+      <button id="notifyBtn">Enable notifications</button>
+      <button id="soundBtn">Sound: ON</button>
+      <button id="monitorBtn">Pause monitoring</button>
+
+      <div class="settings">
+        <div>
+          <label for="cfgValue">Large transfer threshold (native token)</label>
+          <input id="cfgValue" type="number" min="0" step="any" value="10">
+        </div>
+        <div>
+          <label for="cfgBurstCount">Rapid activity: txs from one address</label>
+          <input id="cfgBurstCount" type="number" min="2" step="1" value="5">
+        </div>
+        <div>
+          <label for="cfgBurstWindow">Within (seconds)</label>
+          <input id="cfgBurstWindow" type="number" min="5" step="1" value="60">
+        </div>
+        <div>
+          <label for="cfgNewAddr">Alert on first-time recipients above (native token)</label>
+          <input id="cfgNewAddr" type="number" min="0" step="any" value="1">
+        </div>
+        <div class="full">
+          <label for="cfgWatch">Watchlist addresses (one per line, any tx from/to them triggers an alert)</label>
+          <textarea id="cfgWatch" rows="3" placeholder="0x..."></textarea>
+        </div>
+      </div>
+
+      <ul id="alertLog"><li class="low"><span class="sev">info</span>No alerts yet.</li></ul>
+    </section>
+  </main>
+
+  <footer>
+    PORTLG | Testnet Demonstration
+    <p>Experimental and unaudited. Do not use real funds.</p>
+  </footer>
 
   <script>
     const CONTRACT_ADDRESS = "0x44406CD3e7ccE420c316D015FEE74303F16629E5";
-
     const CHAIN_ID = 420420777n;
-    const RPC_URL = "https://test-evm-rpc-v3.portaldot.dev";
     const EXPLORER = "https://scanner-testnet-v3.portaldot.dev";
+    const RPC_URL = "https://test-evm-rpc-v3.portaldot.dev";
 
     const ABI = [
       "function owner() view returns (address)",
@@ -38,125 +157,351 @@
       "function protectedAction()"
     ];
 
-    let provider;
-    let signer;
-    let contract;
-    let wallet;
-
+    let provider, signer, contract, wallet;
     const $ = id => document.getElementById(id);
 
-    function setStatus(message) {
+    function status(message) {
       $("txStatus").textContent = message;
     }
 
-    function setButtons(owner, paused) {
-      const isOwner =
-        wallet.toLowerCase() === owner.toLowerCase();
+    async function refresh() {
+      const owner = await contract.owner();
+      const paused = await contract.paused();
 
+      $("contractStatus").textContent = paused ? "Paused" : "Active";
+      $("ownerAddress").textContent = "Owner: " + owner;
+
+      const isOwner = wallet.toLowerCase() === owner.toLowerCase();
       $("pauseBtn").disabled = !isOwner || paused;
       $("unpauseBtn").disabled = !isOwner || !paused;
       $("actionBtn").disabled = paused;
     }
 
-    async function refreshStatus() {
-      const owner = await contract.owner();
-      const paused = await contract.paused();
-
-      $("contractStatus").textContent =
-        paused ? "🔴 Paused" : "🟢 Active";
-
-      $("ownerAddress").textContent = "Owner: " + owner;
-      setButtons(owner, paused);
-    }
-
-    async function connectWallet() {
+    async function connect() {
       try {
-        if (!window.ethereum) {
-          throw new Error("Please install MetaMask.");
-        }
-
-        if (!ethers.isAddress(CONTRACT_ADDRESS)) {
-          throw new Error("Verified contract address is missing.");
-        }
+        if (!window.ethereum) throw Error("Install MetaMask first.");
+        if (!window.ethers) throw Error("Could not load ethers library.");
 
         provider = new ethers.BrowserProvider(window.ethereum);
-
         await provider.send("eth_requestAccounts", []);
 
         const network = await provider.getNetwork();
-
         if (network.chainId !== CHAIN_ID) {
-          throw new Error("Select Portaldot V3 Testnet in MetaMask.");
+          throw Error("Select Portaldot V3 Testnet in MetaMask.");
         }
 
         signer = await provider.getSigner();
         wallet = await signer.getAddress();
 
-        contract = new ethers.Contract(
-          CONTRACT_ADDRESS,
-          ABI,
-          signer
-        );
-
         const code = await provider.getCode(CONTRACT_ADDRESS);
+        if (code === "0x") throw Error("Contract not found on this network.");
 
-        if (code === "0x") {
-          throw new Error("No contract code found at this address.");
-        }
-
+        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
         $("walletAddress").textContent = wallet;
-
-        await refreshStatus();
-        setStatus("Wallet connected successfully.");
+        await refresh();
+        status("Wallet connected.");
       } catch (error) {
-        setStatus(error.shortMessage || error.message);
+        status(error.shortMessage || error.message);
       }
     }
 
-    async function sendTransaction(functionName) {
+    async function transact(method) {
       try {
-        if (!contract) {
-          throw new Error("Connect your wallet first.");
-        }
-
-        setStatus("Waiting for MetaMask confirmation...");
+        if (!contract) throw Error("Connect MetaMask first.");
+        status("Waiting for MetaMask confirmation...");
         $("txLink").hidden = true;
 
-        const tx = await contract[functionName]({ gasLimit: 100000 });
-
-        setStatus("Transaction submitted: " + tx.hash);
-
+        const tx = await contract[method]();
+        status("Transaction submitted: " + tx.hash);
         $("txLink").href = EXPLORER + "/tx/" + tx.hash;
         $("txLink").hidden = false;
 
         const receipt = await tx.wait();
+        if (receipt.status !== 1) throw Error("Transaction failed.");
 
-        if (receipt.status !== 1) {
-          throw new Error("Transaction failed.");
-        }
-
-        setStatus("Transaction confirmed: " + tx.hash);
-        await refreshStatus();
+        status("Transaction confirmed: " + tx.hash);
+        await refresh();
       } catch (error) {
-        setStatus(error.shortMessage || error.message);
+        status(error.shortMessage || error.message);
       }
     }
 
-    $("connectBtn").onclick = connectWallet;
-    $("pauseBtn").onclick = () => sendTransaction("pause");
-    $("unpauseBtn").onclick = () => sendTransaction("unpause");
-    $("actionBtn").onclick = () => sendTransaction("protectedAction");
+    $("connectBtn").onclick = connect;
+    $("pauseBtn").onclick = () => transact("pause");
+    $("unpauseBtn").onclick = () => transact("unpause");
+    $("actionBtn").onclick = () => transact("protectedAction");
 
     if (window.ethereum) {
-      window.ethereum.on("accountsChanged", () => {
-        location.reload();
-      });
-
-      window.ethereum.on("chainChanged", () => {
-        location.reload();
-      });
+      window.ethereum.on("accountsChanged", () => location.reload());
+      window.ethereum.on("chainChanged", () => location.reload());
     }
+
+    /* =====================================================
+       SUSPICIOUS TRANSACTION MONITOR
+       Reads new blocks straight from the Portaldot RPC,
+       so it works without MetaMask and needs no contract change.
+       ===================================================== */
+    const POLL_MS = 4000;
+    const MAX_CATCHUP_BLOCKS = 25;
+    const MAX_LOG = 100;
+
+    const state = {
+      rp: null,
+      readContract: null,
+      lastBlock: null,
+      running: true,
+      sound: true,
+      busy: false,
+      pausedNow: false,
+      history: new Map(),   // sender -> [block timestamps]
+      seenAddrs: new Set(), // addresses seen as sender/recipient
+      alerted: new Set()    // dedupe key
+    };
+
+    const short = a => a ? a.slice(0, 6) + "…" + a.slice(-4) : "(contract creation)";
+    const fmt = v => {
+      const s = ethers.formatEther(v);
+      return s.length > 12 ? Number(s).toFixed(4) : s;
+    };
+
+    function loadSettings() {
+      try {
+        const s = JSON.parse(localStorage.getItem("portlgMonitor") || "{}");
+        if (s.value != null) $("cfgValue").value = s.value;
+        if (s.burstCount != null) $("cfgBurstCount").value = s.burstCount;
+        if (s.burstWindow != null) $("cfgBurstWindow").value = s.burstWindow;
+        if (s.newAddr != null) $("cfgNewAddr").value = s.newAddr;
+        if (s.watch != null) $("cfgWatch").value = s.watch;
+        if (s.sound === false) { state.sound = false; $("soundBtn").textContent = "Sound: OFF"; }
+      } catch (_) {}
+    }
+
+    function saveSettings() {
+      try {
+        localStorage.setItem("portlgMonitor", JSON.stringify({
+          value: $("cfgValue").value,
+          burstCount: $("cfgBurstCount").value,
+          burstWindow: $("cfgBurstWindow").value,
+          newAddr: $("cfgNewAddr").value,
+          watch: $("cfgWatch").value,
+          sound: state.sound
+        }));
+      } catch (_) {}
+    }
+
+    function settings() {
+      const num = (id, d) => { const n = Number(id.value); return Number.isFinite(n) && n >= 0 ? n : d; };
+      const toWei = (el, d) => {
+        try { return ethers.parseEther(String(num(el, d))); } catch (_) { return ethers.parseEther(String(d)); }
+      };
+      const watch = new Set(
+        $("cfgWatch").value.split(/\s+/).map(x => x.trim().toLowerCase()).filter(x => /^0x[0-9a-f]{40}$/.test(x))
+      );
+      return {
+        bigValue: toWei($("cfgValue"), 10),
+        newAddrValue: toWei($("cfgNewAddr"), 1),
+        burstCount: Math.max(2, Math.floor(num($("cfgBurstCount"), 5))),
+        burstWindow: Math.max(5, Math.floor(num($("cfgBurstWindow"), 60))),
+        watch
+      };
+    }
+
+    ["cfgValue", "cfgBurstCount", "cfgBurstWindow", "cfgNewAddr", "cfgWatch"].forEach(id =>
+      $(id).addEventListener("change", saveSettings));
+
+    /* ---------- Alert output ---------- */
+    let audioCtx;
+    function beep(severity) {
+      if (!state.sound) return;
+      try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = "square";
+        o.frequency.value = severity === "high" ? 880 : 520;
+        g.gain.value = 0.08;
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start();
+        o.stop(audioCtx.currentTime + (severity === "high" ? 0.6 : 0.25));
+      } catch (_) {}
+    }
+
+    let titleTimer;
+    function flashTitle(text) {
+      clearInterval(titleTimer);
+      let on = false, n = 0;
+      titleTimer = setInterval(() => {
+        document.title = on ? "PORTLG | Smart Contract Security" : "🚨 " + text;
+        on = !on;
+        if (++n > 12) { clearInterval(titleTimer); document.title = "PORTLG | Smart Contract Security"; }
+      }, 700);
+    }
+
+    function raise(severity, title, detail, hash) {
+      const key = severity + title + (hash || detail);
+      if (state.alerted.has(key)) return;
+      state.alerted.add(key);
+
+      const log = $("alertLog");
+      if (log.firstElementChild && log.firstElementChild.textContent.startsWith("infoNo alerts")) {
+        log.innerHTML = "";
+      }
+
+      const li = document.createElement("li");
+      li.className = severity;
+      const sev = document.createElement("span");
+      sev.className = "sev";
+      sev.textContent = severity;
+      li.appendChild(sev);
+      li.appendChild(document.createTextNode(title + " — " + detail + " "));
+      if (hash) {
+        const a = document.createElement("a");
+        a.href = EXPLORER + "/tx/" + hash;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = "[view tx]";
+        li.appendChild(a);
+      }
+      log.insertBefore(li, log.firstChild);
+      while (log.children.length > MAX_LOG) log.removeChild(log.lastChild);
+
+      if (severity === "high" || severity === "medium") {
+        const b = $("alertBanner");
+        b.className = severity === "medium" ? "medium" : "";
+        b.textContent = "🚨 " + title + " — " + detail + " (click to dismiss)";
+        b.style.display = "block";
+        beep(severity);
+        flashTitle(title);
+        if ("Notification" in window && Notification.permission === "granted") {
+          try { new Notification("PORTLG: " + title, { body: detail }); } catch (_) {}
+        }
+      }
+    }
+
+    $("alertBanner").onclick = () => { $("alertBanner").style.display = "none"; };
+
+    /* ---------- Detection rules ---------- */
+    function analyze(tx, block, cfg) {
+      const from = (tx.from || "").toLowerCase();
+      const to = tx.to ? tx.to.toLowerCase() : null;
+      const value = tx.value || 0n;
+      const ts = Number(block.timestamp);
+      const info = `${short(tx.from)} → ${short(tx.to)} · ${fmt(value)} · block ${block.number}`;
+
+      // 1. Large transfer / withdrawal
+      if (value >= cfg.bigValue) {
+        raise("high", "Large transfer", info, tx.hash);
+      }
+
+      // 2. Rapid activity from the same address
+      const arr = (state.history.get(from) || []).filter(t => ts - t <= cfg.burstWindow);
+      arr.push(ts);
+      state.history.set(from, arr);
+      if (arr.length >= cfg.burstCount) {
+        raise("high", "Rapid activity",
+          `${short(tx.from)} sent ${arr.length} txs in ${cfg.burstWindow}s`, tx.hash);
+      }
+
+      // 3. Watchlist
+      if (cfg.watch.has(from) || (to && cfg.watch.has(to))) {
+        raise("high", "Watchlist address active", info, tx.hash);
+      }
+
+      // 4. Money moved to a brand-new address
+      if (to && value >= cfg.newAddrValue && !state.seenAddrs.has(to)) {
+        raise("medium", "Funds sent to new address", info, tx.hash);
+      }
+      state.seenAddrs.add(from);
+      if (to) state.seenAddrs.add(to);
+
+      // 5. Interaction with PORTLG while it is paused
+      if (to === CONTRACT_ADDRESS.toLowerCase() && state.pausedNow) {
+        raise("medium", "Call to PORTLG while paused", info, tx.hash);
+      }
+
+      // 6. Contract creation
+      if (!to) {
+        raise("low", "New contract deployed", `by ${short(tx.from)} · block ${block.number}`, tx.hash);
+      }
+    }
+
+    async function checkFailedContractCall(tx) {
+      try {
+        if (!tx.to || tx.to.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase()) return;
+        const r = await state.rp.getTransactionReceipt(tx.hash);
+        if (r && r.status === 0) {
+          raise("medium", "Failed PORTLG call",
+            `${short(tx.from)} · possible blocked or attack attempt`, tx.hash);
+        }
+      } catch (_) {}
+    }
+
+    /* ---------- Block polling ---------- */
+    function setMonitor(text, ok) {
+      $("monitorStatus").textContent = text;
+      $("liveDot").className = "live" + (ok ? "" : " off");
+    }
+
+    async function poll() {
+      if (!state.running || state.busy) return;
+      state.busy = true;
+      try {
+        const latest = await state.rp.getBlockNumber();
+        if (state.lastBlock === null) state.lastBlock = latest - 1;
+
+        try { state.pausedNow = await state.readContract.paused(); } catch (_) {}
+
+        let from = state.lastBlock + 1;
+        if (latest - from + 1 > MAX_CATCHUP_BLOCKS) from = latest - MAX_CATCHUP_BLOCKS + 1;
+
+        const cfg = settings();
+        for (let n = from; n <= latest; n++) {
+          const block = await state.rp.getBlock(n, true);
+          if (!block) break;
+          for (const tx of (block.prefetchedTransactions || [])) {
+            analyze(tx, block, cfg);
+            await checkFailedContractCall(tx);
+          }
+          state.lastBlock = n;
+        }
+        setMonitor(`Live · block ${state.lastBlock} · contract ${state.pausedNow ? "PAUSED" : "active"}`, true);
+      } catch (e) {
+        setMonitor("RPC error: " + (e.shortMessage || e.message), false);
+      } finally {
+        state.busy = false;
+      }
+    }
+
+    function startMonitor() {
+      if (!window.ethers) { setMonitor("Could not load ethers library.", false); return; }
+      const net = new ethers.Network("portaldot-v3-testnet", CHAIN_ID);
+      state.rp = new ethers.JsonRpcProvider(RPC_URL, net, { staticNetwork: net });
+      state.readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, state.rp);
+      setInterval(poll, POLL_MS);
+      poll();
+    }
+
+    $("monitorBtn").onclick = () => {
+      state.running = !state.running;
+      $("monitorBtn").textContent = state.running ? "Pause monitoring" : "Resume monitoring";
+      if (!state.running) setMonitor("Monitoring paused", false); else poll();
+    };
+
+    $("soundBtn").onclick = () => {
+      state.sound = !state.sound;
+      $("soundBtn").textContent = "Sound: " + (state.sound ? "ON" : "OFF");
+      if (state.sound) beep("medium");
+      saveSettings();
+    };
+
+    $("notifyBtn").onclick = async () => {
+      if (!("Notification" in window)) { $("notifyBtn").textContent = "Not supported"; return; }
+      const p = await Notification.requestPermission();
+      $("notifyBtn").textContent = p === "granted" ? "Notifications ON" : "Notifications blocked";
+    };
+
+    loadSettings();
+    startMonitor();
   </script>
 </body>
 </html>
-
