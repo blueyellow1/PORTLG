@@ -6,7 +6,11 @@ const EXPLORER = "https://scanner-testnet-v3.portaldot.dev";
 let provider, signer, address;
 
 const el = id => document.getElementById(id);
-const alertMsg = msg => el("plgAlert").textContent = msg;
+const alertMsg = msg => {
+  const box = el("plgAlert");
+  if (box) box.textContent = msg;
+  window.alert(msg);
+};
 
 function history() {
   const items = JSON.parse(localStorage.getItem("portlg_transactions") || "[]");
