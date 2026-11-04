@@ -1,32 +1,60 @@
-# PORTLG Architecture
+# PORTLG Wallet — Development Record
 
-## System Overview
+## Project Development
+PORTLG evolved from a smart-contract security demonstration into a browser-based wallet interface integrated with PORTLGuardLite.
 
-PORTLG is a smart contract security prototype on Portaldot V3 Testnet.
+## Current Implementation
+- MetaMask wallet connection
+- Portaldot V3 Testnet network connection
+- Native tPOT balance display
+- Native tPOT transfer interface
+- Recipient address validation
+- Amount and balance validation
+- Local transaction history
+- Blockchain explorer links
+- PORTLGuardLite emergency pause and unpause controls
 
-## Architecture Diagram
+## Smart Contract
+- Contract: PORTLGuardLite
+- Address: 0x44406CD3e7ccE420c316D015FEE74303F16629E5
+- Owner-controlled pause and unpause
+- Protected action
+- SecurityAlert, Paused and Unpaused events
 
-```mermaid
-flowchart TD
-    A[User] --> B[MetaMask Wallet]
-    B --> C[Portaldot V3 EVM]
-    C --> D[PORTLG Smart Contract]
-    D --> E[Protection Controls]
-    E --> F[Pause and Unpause]
-```
+## Development Technology
+- Solidity
+- HTML and CSS
+- JavaScript
+- ethers.js
+- MetaMask
+- Portaldot V3 Testnet
+- GitHub and GitHub Pages
 
-## Components
-
-- **User:** Initiates contract interactions.
-- **MetaMask:** Signs blockchain transactions.
-- **Portaldot V3 EVM:** Executes smart contracts.
-- **PORTLG:** Provides security and protection controls.
-
-## Network
-
+## Network Configuration
+- Network: Portaldot V3 Testnet
 - Chain ID: 420420777
-- Smart Contract: 0x81a4548fA436440641120aEE326A1948bdC558a4
+- Native token: tPOT
+- RPC: https://test-evm-rpc-v3.portaldot.dev
+- Explorer: https://scanner-testnet-v3.portaldot.dev/
 
-## Current Status
+## Current Limitations
+- MetaMask provides account access and transaction signing.
+- The current implementation targets Portaldot V3 Testnet.
+- Transaction history is stored locally in the browser.
+- Automatic threat detection and guardian-based security are not implemented.
+- The project has not undergone an independent security audit.
 
-Prototype developed for Portaldot Hacker House 2026. On-chain verification and functional demonstration are pending.
+## Future Development
+- Multi-network wallet support
+- Improved transaction monitoring
+- Automated security risk detection
+- Guardian-based security mechanisms
+
+## Development Status
+The browser wallet interface and PORTLGuardLite integration are under active development. Further testing and security review are required.
+
+## Project Repository
+https://github.com/blueyellow1/PORTLG
+
+## Live Website
+https://blueyellow1.github.io/PORTLG/
