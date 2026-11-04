@@ -503,5 +503,35 @@
     loadSettings();
     startMonitor();
   </script>
+
+<section id="portlg-wallet" style="background:#101b35;color:white;padding:25px;border-radius:16px;margin:25px auto;max-width:850px;font-family:Arial">
+<h2>PORTLG Wallet</h2>
+<p>Secure Multi-Network Wallet</p>
+
+<div style="padding:15px;background:#1c2b4b;border-radius:10px">
+<h3>Wallet Balance</h3>
+<h2 id="plgBalance">--</h2>
+<p id="plgNetwork">Network: Not connected</p>
+<p id="plgAddress" style="word-break:break-all">No wallet connected</p>
+<button id="plgConnect">Connect Wallet</button>
+</div>
+
+<hr>
+<h3>Send Crypto</h3>
+<input id="plgRecipient" placeholder="Recipient wallet address" style="width:95%;padding:12px;margin:5px">
+<input id="plgAmount" type="number" min="0" step="any" placeholder="Amount in tPOT" style="width:95%;padding:12px;margin:5px">
+<p id="plgAlert" role="alert" style="color:#ff7777"></p>
+<button id="plgSend">Send Transaction</button>
+
+<hr>
+<h3>Receive Crypto</h3>
+<button id="plgCopy">Copy My Address</button>
+
+<hr>
+<h3>Transaction History</h3>
+<div id="plgHistory">No transactions yet.</div>
+</section>
+
+<script src="wallet.js"></script>
 </body>
 </html>
