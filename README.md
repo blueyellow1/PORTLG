@@ -1,52 +1,51 @@
-# PORTLG — Smart Contract Security Guardrail
+# PORTLG Wallet
 
 ## Overview
-PORTLG is a smart contract security demonstration built for the Portaldot V3 Testnet using Solidity and Remix IDE.
-
-The project demonstrates how an owner can pause and resume protected smart contract operations while allowing multiple wallets to interact with the same deployed contract.
+PORTLG is a browser-based wallet interface integrated with MetaMask and PORTLGuardLite smart-contract security on Portaldot V3 Testnet.
 
 ## Problem
-Smart contracts need mechanisms to respond to security concerns and temporarily restrict sensitive operations.
+Blockchain users need accessible wallet interfaces and mechanisms for responding to smart-contract security incidents.
 
-## Our Solution
-PORTLG demonstrates an owner-controlled emergency pause mechanism that can restrict protected actions without preventing users from connecting their wallets.
+## Solution
+PORTLG combines wallet connectivity, transaction validation and owner-controlled emergency contract controls.
 
-## Key Features
-- **Pause:** The contract owner can temporarily disable protected operations.
-- **Unpause:** The contract owner can restore protected operations.
-- **Multi-Wallet Access:** Different wallets can call the protected function when the contract is active.
-- **Owner Authorization:** Only the owner can pause or unpause the contract.
-- **Security Events:** Contract events provide records of supported operations.
+## Wallet Features
+- MetaMask connection
+- tPOT balance display
+- Send native tPOT
+- Recipient address validation
+- Amount and balance validation
+- Transaction history stored locally
+- Blockchain explorer links
 
-## How It Works
-1. The owner deploys the smart contract.
-2. A user connects a wallet to the Portaldot V3 Testnet.
-3. The user calls `protectedAction()`.
-4. The owner can activate `pause()` to block further protected actions.
-5. The owner can call `unpause()` to restore access.
+## Smart Contract Security
+- PORTLGuardLite
+- Owner-only pause and unpause
+- Protected action
+- SecurityAlert events
 
-## Technology Stack
-- Solidity
-- Remix IDE
-- MetaMask
-- Portaldot V3 Testnet
-- GitHub
+## Technology
+Solidity, HTML, CSS, JavaScript, ethers.js, MetaMask and Portaldot V3 Testnet.
 
-## Blockchain Verification
-Successful on-chain transactions can be checked using the Portaldot V3 Testnet Explorer:
+## Testnet
+- Network: Portaldot V3 Testnet
+- Chain ID: 420420777
+- Contract: 0x44406CD3e7ccE420c316D015FEE74303F16629E5
+- RPC: https://test-evm-rpc-v3.portaldot.dev
+- Explorer: https://scanner-testnet-v3.portaldot.dev/
 
-https://scanner-testnet-v3.portaldot.dev/
+## Limitations
+The wallet currently relies on MetaMask for account access and signing. Multi-network support, automatic threat detection and guardian-based security are future improvements.
 
-Transaction hashes and deployment evidence will be added after verification.
-
-## Current Status
-The PORTLGuardLite contract has been deployed previously. Multi-wallet interaction and blockchain explorer verification are being tested.
-
-## Future Improvements
-- Security monitoring dashboard
-- Additional access controls
-- Automated security alerts
-- Transaction activity visualization
+## Future Development
+- Multi-network support
+- Automated threat detection
+- Guardian-based security
+- Enhanced transaction monitoring
 
 ## Disclaimer
-PORTLG is an experimental testnet security demonstration. It has not undergone an independent security audit and should not be used to protect real funds.
+PORTLG is an experimental testnet project and has not undergone an independent security audit. It should not be used to secure real funds.
+
+## Links
+- GitHub: https://github.com/blueyellow1/PORTLG
+- Website: https://blueyellow1.github.io/PORTLG/
