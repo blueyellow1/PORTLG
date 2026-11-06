@@ -241,7 +241,12 @@ def confirm_transaction():
     expected_action = payload.get("action")
     expected_sender = payload.get("from")
 
-    if not isinstance(tx_hash, str) or not Web3.is_hex(tx_hash) or len(tx_hash) != 66:
+    if (
+        not isinstance(tx_hash, str)
+        or len(tx_hash) != 66
+        or not tx_hash.startswith("0x")
+        or any(char not in "0123456789abcdefABCDEF" for char in tx_hash[2:])
+    ):
         return jsonify(error="A valid transaction hash is required."), 400
     if expected_action not in ALLOWED_ACTIONS:
         return jsonify(error="Unsupported contract action."), 400
