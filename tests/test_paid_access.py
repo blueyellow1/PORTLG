@@ -106,6 +106,139 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("transaction hash", response.get_json()["error"])
 
+    def _login_headers(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        signed = Account.sign_message(
+            encode_defunct(text=challenge["message"]), self.account.key
+        )
+        login = self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": signed.signature.hex(),
+            },
+        ).get_json()
+        return {"Authorization": f"Bearer {login['token']}"}
+
+    def _mock_confirm_chain(self, chain_id=420420777, calldata="0x12345678",
+                            receipt_block=250, head_block=250, canonical=True):
+        block_hash = "0x" + "11" * 32
+        receipt_hash = block_hash if canonical else "0x" + "22" * 32
+        sender = self.account.address
+
+        class FakeFunction:
+            def _encode_transaction_data(self):
+                return "0x12345678"
+
+        class FakeFunctions:
+            def protectedAction(self):
+                return FakeFunction()
+
+        class FakeContract:
+            functions = FakeFunctions()
+
+            def decode_function_input(self, data):
+                return type("DecodedFunction", (), {"fn_name": "protectedAction"})(), {}
+
+        class FakeEth:
+            block_number = head_block
+
+            def get_transaction(self, tx_hash):
+                return {
+                    "to": backend_module.CONTRACT_ADDRESS,
+                    "from": sender,
+                    "chainId": chain_id,
+                    "value": 0,
+                    "input": calldata,
+                }
+
+            def get_transaction_receipt(self, tx_hash):
+                return {
+                    "status": 1,
+                    "blockNumber": receipt_block,
+                    "gasUsed": 50000,
+                    "blockHash": receipt_hash,
+                }
+
+            def get_block(self, block_number):
+                return {"hash": block_hash}
+
+        fake_web3 = type("FakeWeb3", (), {"eth": FakeEth()})()
+        return patch.object(backend_module, "rpc_ready"), patch.object(
+            backend_module, "w3", fake_web3
+        ), patch.object(backend_module, "get_contract", return_value=FakeContract())
+
+    def test_confirm_transaction_rejects_wrong_chain_id(self):
+        headers = self._login_headers()
+        p1, p2, p3 = self._mock_confirm_chain(chain_id=1)
+        with p1, p2, p3:
+            response = self.client.post(
+                "/api/transactions/confirm",
+                json={"transactionHash": "0x" + "ab" * 32,
+                      "action": "protectedAction", "from": self.account.address},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("wrong network", response.get_json()["error"])
+
+    def test_confirm_transaction_rejects_unexpected_calldata(self):
+        headers = self._login_headers()
+        p1, p2, p3 = self._mock_confirm_chain(calldata="0xdeadbeef")
+        with p1, p2, p3:
+            response = self.client.post(
+                "/api/transactions/confirm",
+                json={"transactionHash": "0x" + "ab" * 32,
+                      "action": "protectedAction", "from": self.account.address},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("calldata", response.get_json()["error"])
+
+    def test_confirm_transaction_waits_for_required_confirmations(self):
+        headers = self._login_headers()
+        p1, p2, p3 = self._mock_confirm_chain(head_block=250, receipt_block=250)
+        with patch.object(backend_module, "MIN_TX_CONFIRMATIONS", 2), p1, p2, p3:
+            response = self.client.post(
+                "/api/transactions/confirm",
+                json={"transactionHash": "0x" + "ab" * 32,
+                      "action": "protectedAction", "from": self.account.address},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.get_json()["status"], "pending")
+        self.assertEqual(response.get_json()["confirmations"], 1)
+
+    def test_confirm_transaction_rejects_noncanonical_receipt(self):
+        headers = self._login_headers()
+        p1, p2, p3 = self._mock_confirm_chain(canonical=False)
+        with p1, p2, p3:
+            response = self.client.post(
+                "/api/transactions/confirm",
+                json={"transactionHash": "0x" + "ab" * 32,
+                      "action": "protectedAction", "from": self.account.address},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("canonical chain", response.get_json()["error"])
+
+    def test_confirm_transaction_consumes_credit_after_validated_receipt(self):
+        headers = self._login_headers()
+        p1, p2, p3 = self._mock_confirm_chain(head_block=251, receipt_block=250)
+        with patch.object(backend_module, "MIN_TX_CONFIRMATIONS", 2), p1, p2, p3:
+            response = self.client.post(
+                "/api/transactions/confirm",
+                json={"transactionHash": "0x" + "ab" * 32,
+                      "action": "protectedAction", "from": self.account.address},
+                headers=headers,
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["confirmed"])
+        self.assertEqual(response.get_json()["confirmations"], 2)
+        self.assertEqual(response.get_json()["paidAccess"]["account"]["creditsRemaining"], 9)
+
     def test_challenge_cannot_be_reused(self):
         challenge = self.client.post(
             "/api/paid-access/challenge", json={"wallet": self.account.address}
