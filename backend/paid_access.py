@@ -55,6 +55,12 @@ def init_db():
             );
             CREATE INDEX IF NOT EXISTS paid_access_sessions_wallet
                 ON paid_access_sessions(wallet);
+            CREATE TABLE IF NOT EXISTS paid_access_spent_transactions (
+                transaction_hash TEXT PRIMARY KEY,
+                wallet TEXT NOT NULL,
+                action TEXT NOT NULL,
+                spent_at INTEGER NOT NULL
+            );
             """
         )
 
@@ -181,3 +187,49 @@ def lock_account(wallet, minutes=15, reason="Suspicious authenticated activity")
             (now + minutes * 60, str(reason)[:240], wallet),
         )
         return cursor.rowcount == 1
+
+
+def consume_credit(wallet, transaction_hash, action="protectedAction"):
+    """Atomically debit one trial credit for one verified on-chain action."""
+    if not isinstance(wallet, str) or not Web3.is_address(wallet):
+        raise ValueError("A valid wallet address is required.")
+    if not isinstance(transaction_hash, str) or len(transaction_hash) != 66 or not Web3.is_hex(transaction_hash):
+        raise ValueError("A valid transaction hash is required.")
+    if action != "protectedAction":
+        raise ValueError("Credits can only be consumed by protectedAction.")
+    wallet = Web3.to_checksum_address(wallet)
+    tx_hash = transaction_hash.lower()
+    now = int(time.time())
+    init_db()
+    with _connect() as db:
+        db.execute("BEGIN IMMEDIATE")
+        prior = db.execute(
+            "SELECT 1 FROM paid_access_spent_transactions WHERE transaction_hash = ?",
+            (tx_hash,),
+        ).fetchone()
+        if prior:
+            return {"consumed": False, "reason": "transaction_already_used"}
+        user = db.execute(
+            "SELECT * FROM paid_access_users WHERE wallet = ?", (wallet,)
+        ).fetchone()
+        if user is None:
+            return {"consumed": False, "reason": "account_not_found"}
+        if user["locked_until"] > now:
+            return {"consumed": False, "reason": "account_locked"}
+        if user["trial_ends_at"] <= now:
+            return {"consumed": False, "reason": "trial_expired"}
+        if user["credits_remaining"] <= 0:
+            return {"consumed": False, "reason": "no_credits"}
+        db.execute(
+            "UPDATE paid_access_users SET credits_remaining = credits_remaining - 1 WHERE wallet = ?",
+            (wallet,),
+        )
+        db.execute(
+            """INSERT INTO paid_access_spent_transactions
+               (transaction_hash, wallet, action, spent_at) VALUES (?, ?, ?, ?)""",
+            (tx_hash, wallet, action, now),
+        )
+        updated = db.execute(
+            "SELECT * FROM paid_access_users WHERE wallet = ?", (wallet,)
+        ).fetchone()
+        return {"consumed": True, "account": _account_status(updated, now)}
