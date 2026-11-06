@@ -14,26 +14,22 @@
 | Deployment field | Current evidence |
 |---|---|
 | Contract address | `0x44406CD3e7ccE420c316D015FEE74303F16629E5` |
-| Deployment block | `200641` (block identified in reviewer feedback; exact creation extrinsic still needs matching) |
-| Deployment transaction hash | **Not yet confirmed** |
+| Deployment block | `200580` |
+| Deployment transaction hash | `0x6115a0880f1822ba7b43c5b0461323eaebab701f12ce22b81325a3d2b1e5d879` |
+| Deployer | `0xde8547c35e4eb0cf3850a3f67def1defd4d43594` |
+| Receipt status | Success (`0x1`) |
 
-### Correction to the previously listed transaction
+### Verified deployment evidence
 
-The previously recorded hash
+The deployment transaction was independently checked through the Portaldot V3 RPC in Google Colab. Its successful receipt matches the contract address above and block `200580`. The transaction input begins with contract-creation bytecode (`0x60806040`), confirming that it is a contract creation transaction rather than a call to an existing contract.
 
-`0x6115a0880f1822ba7b43c5b0461323eaebab701f12ce22b81325a3d2b1e5d879`
-
-must not be used as the deployment transaction. The reviewer identified its four-byte input selector, `0x3d7b369a`, as `protectedAction()`. This makes it a call to an already deployed contract, not the transaction that created the contract.
-
-The reviewer also confirmed that the contract code exists at the address above and referenced block `200641`. The exact contract-creation transaction hash has not yet been matched to a creation extrinsic and its `Instantiated` event. Therefore, this document deliberately leaves the deployment hash unconfirmed rather than substituting a contract-interaction hash or guessing another hash.
-
-### What qualifies as deployment evidence
-
-The correct deployment record must point to the contract-creation extrinsic and its execution event, with the emitted contract address matching:
+The Portaldot Scanner independently shows the `revive(Instantiated)` event at block `200580`, with the deployed contract address matching:
 
 `0x44406CD3e7ccE420c316D015FEE74303F16629E5`
 
-A `Contracts.call` / `protectedAction()` transaction is an interaction after deployment and belongs in interaction or test evidence, not in the deployment field.
+### Separate protected-action interaction
+
+Block `200641` is a later interaction with the deployed contract. The Scanner shows a `revive(ContractEmitted)` event for the same contract, corresponding to `protectedAction()` and the `Protected action executed` alert. This interaction is not the deployment transaction and remains part of the contract's on-chain activity history.
 
 ## 3. Contract Compilation
 
