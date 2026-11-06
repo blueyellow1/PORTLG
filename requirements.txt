@@ -1,0 +1,5 @@
+flask>=3.0
+web3>=7.0
+py-solc-x>=2.0
+python-dotenv>=1.0
+eth-tester[py-evm]>=0.12.0b1
