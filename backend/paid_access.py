@@ -213,7 +213,12 @@ def consume_credit(wallet, transaction_hash, action="protectedAction"):
     """Atomically debit one trial credit for one verified on-chain action."""
     if not isinstance(wallet, str) or not Web3.is_address(wallet):
         raise ValueError("A valid wallet address is required.")
-    if not isinstance(transaction_hash, str) or len(transaction_hash) != 66 or not Web3.is_hex(transaction_hash):
+    if (
+        not isinstance(transaction_hash, str)
+        or len(transaction_hash) != 66
+        or not transaction_hash.startswith("0x")
+        or any(char not in "0123456789abcdefABCDEF" for char in transaction_hash[2:])
+    ):
         raise ValueError("A valid transaction hash is required.")
     if action != "protectedAction":
         raise ValueError("Credits can only be consumed by protectedAction.")
