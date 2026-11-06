@@ -147,5 +147,98 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
 
 
+    def test_five_invalid_signatures_temporarily_rate_limit_ip(self):
+        for attempt in range(5):
+            challenge = self.client.post(
+                "/api/paid-access/challenge", json={"wallet": self.account.address}
+            ).get_json()
+            other = Account.create()
+            signed = Account.sign_message(
+                encode_defunct(text=challenge["message"]), other.key
+            )
+            response = self.client.post(
+                "/api/paid-access/verify",
+                json={
+                    "wallet": self.account.address,
+                    "nonce": challenge["nonce"],
+                    "signature": signed.signature.hex(),
+                },
+            )
+            self.assertIn(response.status_code, (401, 429))
+        blocked = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        )
+        self.assertEqual(blocked.status_code, 429)
+        self.assertGreater(blocked.get_json()["retryAfterSeconds"], 0)
+
+    def test_locked_wallet_can_recover_by_signing_fresh_challenge(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        signed = Account.sign_message(
+            encode_defunct(text=challenge["message"]), self.account.key
+        )
+        self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": signed.signature.hex(),
+            },
+        )
+        self.assertTrue(paid_access.lock_account(self.account.address, 30, "test"))
+        recovery = self.client.post(
+            "/api/paid-access/recovery/challenge",
+            json={"wallet": self.account.address},
+        )
+        self.assertEqual(recovery.status_code, 200)
+        recovery_data = recovery.get_json()
+        recovery_signature = Account.sign_message(
+            encode_defunct(text=recovery_data["message"]), self.account.key
+        )
+        recovered = self.client.post(
+            "/api/paid-access/recovery/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": recovery_data["nonce"],
+                "signature": recovery_signature.signature.hex(),
+            },
+        )
+        self.assertEqual(recovered.status_code, 200)
+        self.assertTrue(recovered.get_json()["recovered"])
+        self.assertFalse(recovered.get_json()["account"]["locked"])
+
+    def test_recovery_challenge_cannot_be_reused(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        signed = Account.sign_message(
+            encode_defunct(text=challenge["message"]), self.account.key
+        )
+        self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": signed.signature.hex(),
+            },
+        )
+        paid_access.lock_account(self.account.address, 30, "test")
+        recovery = self.client.post(
+            "/api/paid-access/recovery/challenge",
+            json={"wallet": self.account.address},
+        ).get_json()
+        recovery_signature = Account.sign_message(
+            encode_defunct(text=recovery["message"]), self.account.key
+        )
+        payload = {
+            "wallet": self.account.address,
+            "nonce": recovery["nonce"],
+            "signature": recovery_signature.signature.hex(),
+        }
+        self.assertEqual(self.client.post("/api/paid-access/recovery/verify", json=payload).status_code, 200)
+        self.assertEqual(self.client.post("/api/paid-access/recovery/verify", json=payload).status_code, 401)
+
+
 if __name__ == "__main__":
     unittest.main()
