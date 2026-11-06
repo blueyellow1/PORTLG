@@ -81,6 +81,10 @@ def config():
 @app.post("/api/paid-access/challenge")
 def paid_access_challenge():
     payload = request.get_json(silent=True) or {}
+    blocked_for = paid_access.check_auth_rate_limit(request.remote_addr)
+    if blocked_for:
+        return jsonify(error="Too many failed sign-in attempts. Try again later.",
+                       retryAfterSeconds=blocked_for), 429
     try:
         return jsonify(paid_access.create_challenge(payload.get("wallet")))
     except ValueError as exc:
@@ -90,6 +94,11 @@ def paid_access_challenge():
 @app.post("/api/paid-access/verify")
 def paid_access_verify():
     payload = request.get_json(silent=True) or {}
+    ip_address = request.remote_addr
+    blocked_for = paid_access.check_auth_rate_limit(ip_address)
+    if blocked_for:
+        return jsonify(error="Too many failed sign-in attempts. Try again later.",
+                       retryAfterSeconds=blocked_for), 429
     try:
         result = paid_access.verify_signature(
             payload.get("wallet"), payload.get("nonce"), payload.get("signature")
@@ -98,7 +107,45 @@ def paid_access_verify():
     except PermissionError as exc:
         return jsonify(error=str(exc)), 423
     except ValueError as exc:
-        return jsonify(error=str(exc)), 401
+        retry_after = paid_access.record_auth_failure(
+            ip_address, payload.get("wallet", ""), "Invalid or expired wallet signature/challenge"
+        )
+        status_code = 429 if retry_after else 401
+        return jsonify(error=str(exc), retryAfterSeconds=retry_after or None), status_code
+
+
+@app.post("/api/paid-access/recovery/challenge")
+def paid_access_recovery_challenge():
+    payload = request.get_json(silent=True) or {}
+    blocked_for = paid_access.check_auth_rate_limit(request.remote_addr)
+    if blocked_for:
+        return jsonify(error="Too many failed authentication attempts. Try again later.",
+                       retryAfterSeconds=blocked_for), 429
+    try:
+        return jsonify(paid_access.create_recovery_challenge(payload.get("wallet")))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.post("/api/paid-access/recovery/verify")
+def paid_access_recovery_verify():
+    payload = request.get_json(silent=True) or {}
+    ip_address = request.remote_addr
+    blocked_for = paid_access.check_auth_rate_limit(ip_address)
+    if blocked_for:
+        return jsonify(error="Too many recovery attempts. Try again later.",
+                       retryAfterSeconds=blocked_for), 429
+    try:
+        account = paid_access.recover_account(
+            payload.get("wallet"), payload.get("nonce"), payload.get("signature")
+        )
+        return jsonify(recovered=True, account=account)
+    except ValueError as exc:
+        retry_after = paid_access.record_auth_failure(
+            ip_address, payload.get("wallet", ""), "Invalid account recovery signature/challenge"
+        )
+        status_code = 429 if retry_after else 401
+        return jsonify(error=str(exc), retryAfterSeconds=retry_after or None), status_code
 
 
 @app.get("/api/paid-access/status")
