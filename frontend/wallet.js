@@ -11,18 +11,53 @@ let signer;
 let readContract;
 let connectedAccount;
 let backendConfig;
+let paidAccessToken = null;
+let paidAccessAccount = null;
 
 const element = (id) => document.getElementById(id);
 const setStatus = (message) => { element("txStatus").textContent = message; };
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options
-  });
+  const headers = {
+    "Content-Type": "application/json",
+    ...(paidAccessToken ? { Authorization: `Bearer ${paidAccessToken}` } : {}),
+    ...(options.headers || {})
+  };
+  const response = await fetch(path, { ...options, headers });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(result.error || `Backend request failed (${response.status}).`);
   return result;
+}
+
+function updatePaidAccessControls() {
+  const allowed = Boolean(paidAccessAccount && paidAccessAccount.accessAllowed);
+  element("actionBtn").disabled = !allowed || !readContract;
+}
+
+async function refreshPaidAccess() {
+  if (!paidAccessToken) {
+    paidAccessAccount = null;
+    element("paidAccessStatus").textContent = "Not signed in. Sign in with MetaMask to start or view your trial.";
+    element("recoverBtn").disabled = !signer;
+    updatePaidAccessControls();
+    return;
+  }
+  try {
+    const result = await api("/api/paid-access/status");
+    paidAccessAccount = result.account;
+    const account = paidAccessAccount;
+    const trialText = account.trialActive ? "Trial active" : "Trial expired";
+    const lockText = account.locked ? " · Account temporarily locked" : "";
+    element("paidAccessStatus").textContent =
+      `${trialText} · ${account.creditsRemaining} credits remaining${lockText}`;
+    element("recoverBtn").disabled = !account.locked;
+  } catch (error) {
+    paidAccessToken = null;
+    paidAccessAccount = null;
+    element("paidAccessStatus").textContent = `Paid Access session unavailable: ${error.message}`;
+    element("recoverBtn").disabled = !signer;
+  }
+  updatePaidAccessControls();
 }
 
 async function refreshContractState() {
@@ -40,7 +75,7 @@ async function refreshContractState() {
   const isOwner = connectedAccount.toLowerCase() === owner.toLowerCase();
   element("pauseBtn").disabled = !isOwner || paused;
   element("unpauseBtn").disabled = !isOwner || !paused;
-  element("actionBtn").disabled = paused;
+  updatePaidAccessControls();
 }
 
 async function connectWallet() {
@@ -68,17 +103,81 @@ async function connectWallet() {
 
     readContract = new ethers.Contract(backendConfig.address, CONTRACT_ABI, provider);
     element("walletAddress").textContent = connectedAccount;
+    element("signInBtn").disabled = false;
+    await refreshPaidAccess();
     await refreshContractState();
-    setStatus("Wallet and backend connected. Contract controls are ready.");
+    setStatus("Wallet and backend connected. Sign in to enable Protected Action.");
     await loadEvents();
   } catch (error) {
     setStatus(error.shortMessage || error.message);
   }
 }
 
+async function signInPaidAccess() {
+  try {
+    if (!signer || !connectedAccount) throw new Error("Connect MetaMask first.");
+    element("signInBtn").disabled = true;
+    element("paidAccessStatus").textContent = "Requesting a one-time sign-in message...";
+    const challenge = await api("/api/paid-access/challenge", {
+      method: "POST",
+      body: JSON.stringify({ wallet: connectedAccount })
+    });
+    const signature = await signer.signMessage(challenge.message);
+    const result = await api("/api/paid-access/verify", {
+      method: "POST",
+      body: JSON.stringify({
+        wallet: connectedAccount,
+        nonce: challenge.nonce,
+        signature
+      })
+    });
+    paidAccessToken = result.token;
+    paidAccessAccount = result.account;
+    await refreshPaidAccess();
+    await refreshContractState();
+    element("paidAccessStatus").textContent =
+      `Signed in · ${paidAccessAccount.trialActive ? "Trial active" : "Trial expired"} · ${paidAccessAccount.creditsRemaining} credits remaining`;
+  } catch (error) {
+    element("paidAccessStatus").textContent = error.message;
+  } finally {
+    element("signInBtn").disabled = !signer;
+  }
+}
+
+async function recoverPaidAccess() {
+  try {
+    if (!signer || !connectedAccount) throw new Error("Connect the locked wallet first.");
+    element("recoverBtn").disabled = true;
+    const challenge = await api("/api/paid-access/recovery/challenge", {
+      method: "POST",
+      body: JSON.stringify({ wallet: connectedAccount })
+    });
+    const signature = await signer.signMessage(challenge.message);
+    const result = await api("/api/paid-access/recovery/verify", {
+      method: "POST",
+      body: JSON.stringify({
+        wallet: connectedAccount,
+        nonce: challenge.nonce,
+        signature
+      })
+    });
+    paidAccessAccount = result.account;
+    element("paidAccessStatus").textContent =
+      `Account recovered · ${paidAccessAccount.creditsRemaining} credits remaining. Sign in again to continue.`;
+    paidAccessToken = null;
+    await refreshPaidAccess();
+  } catch (error) {
+    element("paidAccessStatus").textContent = error.message;
+    element("recoverBtn").disabled = false;
+  }
+}
+
 async function submitContractTransaction(action) {
   try {
     if (!signer || !connectedAccount) throw new Error("Connect MetaMask before submitting a transaction.");
+    if (action === "protectedAction" && (!paidAccessAccount || !paidAccessAccount.accessAllowed)) {
+      throw new Error("Sign in with an active Paid Access trial and available credits first.");
+    }
 
     setStatus("Validating operation with PORTLG backend...");
     const prepared = await api("/api/transactions/prepare", {
@@ -94,15 +193,29 @@ async function submitContractTransaction(action) {
     if (!receipt || receipt.status !== 1) throw new Error("The blockchain did not confirm this transaction successfully.");
 
     setStatus("Receipt detected. Verifying transaction with PORTLG backend...");
-    const verification = await api("/api/transactions/confirm", {
-      method: "POST",
-      body: JSON.stringify({
-        transactionHash: transaction.hash,
-        action,
-        from: connectedAccount
-      })
-    });
+    let verification;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      verification = await api("/api/transactions/confirm", {
+        method: "POST",
+        body: JSON.stringify({
+          transactionHash: transaction.hash,
+          action,
+          from: connectedAccount
+        })
+      });
+      if (verification.confirmed) break;
+      if (verification.status !== "pending") {
+        throw new Error(verification.error || "The backend could not confirm this transaction.");
+      }
+      setStatus(`Waiting for required confirmations: ${verification.confirmations}/${verification.requiredConfirmations}`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    if (!verification || !verification.confirmed) {
+      throw new Error("The transaction is still awaiting backend confirmation. Refresh status before retrying.");
+    }
+
     setStatus(`Backend verified ${verification.action} · Block ${verification.blockNumber} · Tx: ${verification.transactionHash}`);
+    await refreshPaidAccess();
     await refreshContractState();
     await loadEvents();
   } catch (error) {
@@ -130,6 +243,8 @@ async function loadEvents() {
 }
 
 element("connectBtn").addEventListener("click", connectWallet);
+element("signInBtn").addEventListener("click", signInPaidAccess);
+element("recoverBtn").addEventListener("click", recoverPaidAccess);
 element("pauseBtn").addEventListener("click", () => submitContractTransaction("pause"));
 element("unpauseBtn").addEventListener("click", () => submitContractTransaction("unpause"));
 element("actionBtn").addEventListener("click", () => submitContractTransaction("protectedAction"));
