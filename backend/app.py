@@ -155,8 +155,16 @@ def prepare_transaction():
             return jsonify(error="The contract is already paused."), 409
         if action == "unpause" and not paused:
             return jsonify(error="The contract is not paused."), 409
-        if action == "protectedAction" and paused:
-            return jsonify(error="The protected action is unavailable while the contract is paused."), 409
+        if action == "protectedAction":
+            account = _session_account()
+            if not account:
+                return jsonify(error="Sign in with MetaMask to use Paid Access."), 401
+            if account["wallet"].lower() != sender.lower():
+                return jsonify(error="The signed-in wallet does not match the transaction sender."), 403
+            if not account["accessAllowed"]:
+                return jsonify(error="Your trial has expired or your credits are exhausted. Purchase credits to continue."), 402
+            if paused:
+                return jsonify(error="The protected action is unavailable while the contract is paused."), 409
 
         function = getattr(contract.functions, action)()
         calldata = function._encode_transaction_data()
@@ -193,6 +201,13 @@ def confirm_transaction():
     if not isinstance(expected_sender, str) or not Web3.is_address(expected_sender):
         return jsonify(error="A valid wallet address is required."), 400
 
+    session_account = _session_account() if expected_action == "protectedAction" else None
+    if expected_action == "protectedAction":
+        if not session_account:
+            return jsonify(error="Sign in with MetaMask to confirm a Paid Access action."), 401
+        if session_account["wallet"].lower() != Web3.to_checksum_address(expected_sender).lower():
+            return jsonify(error="The signed-in wallet does not match the transaction sender."), 403
+
     try:
         rpc_ready()
         tx = w3.eth.get_transaction(tx_hash)
@@ -209,8 +224,21 @@ def confirm_transaction():
         if function.fn_name != expected_action:
             return jsonify(error="Confirmed transaction does not match the requested action."), 400
 
+        credit_result = None
+        if expected_action == "protectedAction":
+            credit_result = paid_access.consume_credit(
+                expected_sender, tx_hash, action=expected_action
+            )
+            if not credit_result["consumed"]:
+                return jsonify(
+                    error="The transaction was confirmed, but no credit was deducted.",
+                    reason=credit_result["reason"],
+                    confirmed=True,
+                ), 409
+
         return jsonify(
             confirmed=True,
+            paidAccess=credit_result,
             status="success",
             action=function.fn_name,
             transactionHash=tx_hash,
