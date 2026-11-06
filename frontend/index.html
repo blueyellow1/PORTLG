@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PORTLG Wallet</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
+  <style>
+    body{margin:0;font-family:Arial,sans-serif;background:#0b1220;color:#fff;text-align:center}
+    header{background:#15243d;padding:20px}
+    main{max-width:650px;margin:35px auto;padding:15px}
+    .panel{background:#192943;padding:24px;margin:18px 0;border-radius:12px}
+    button{background:#20a8e0;color:#fff;padding:12px 18px;border:0;border-radius:8px;margin:6px;cursor:pointer}
+    button:disabled{opacity:.4;cursor:not-allowed}
+    #txStatus,#walletAddress,#ownerAddress{overflow-wrap:anywhere}
+    footer{padding:25px;color:#aab6c9}
+  </style>
+  <script src="wallet.js" defer></script>
+</head>
+<body>
+  <header><h2>PORTLG Wallet</h2><p>Portaldot V3 Testnet</p></header>
+  <main>
+    <h1>Wallet &amp; Smart Contract Security</h1>
+    <p>Connect MetaMask to interact with PORTLGuardLite.</p>
+    <section class="panel">
+      <h2>Wallet Connection</h2>
+      <button id="connectBtn">Connect MetaMask</button>
+      <p id="walletAddress">Wallet not connected</p>
+    </section>
+    <section class="panel">
+      <h2>Contract Status</h2>
+      <p id="contractStatus">Not connected</p>
+      <p id="ownerAddress"></p>
+      <p id="backendStatus">Backend not connected</p>
+    </section>
+    <section class="panel">
+      <h2>Security Controls</h2>
+      <button id="pauseBtn" disabled>Pause</button>
+      <button id="unpauseBtn" disabled>Unpause</button>
+      <button id="actionBtn" disabled>Protected Action</button>
+    </section>
+    <section class="panel">
+      <h2>On-chain Event Log</h2>
+      <div id="eventList">Connect wallet to load contract events.</div>
+    </section>
+    <section class="panel">
+      <h2>Transaction Activity</h2>
+      <p id="txStatus">No transaction submitted</p>
+    </section>
+  </main>
+  <footer>PORTLG | Testnet Demonstration<p>Experimental and unaudited. Do not use real funds.</p></footer>
+</body>
+</html>
