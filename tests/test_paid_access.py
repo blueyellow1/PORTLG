@@ -123,25 +123,28 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         ).get_json()
         return {"Authorization": f"Bearer {login['token']}"}
 
-    def _mock_confirm_chain(self, chain_id=420420777, calldata="0x12345678",
-                            receipt_block=250, head_block=250, canonical=True):
+    def _mock_confirm_chain(self, action="protectedAction", chain_id=420420777,
+                            calldata="0x12345678", receipt_block=250,
+                            head_block=250, canonical=True):
         block_hash = "0x" + "11" * 32
         receipt_hash = block_hash if canonical else "0x" + "22" * 32
         sender = self.account.address
 
         class FakeFunction:
             def _encode_transaction_data(self):
-                return "0x12345678"
+                return calldata
 
         class FakeFunctions:
-            def protectedAction(self):
-                return FakeFunction()
+            def __getattr__(self, name):
+                if name in backend_module.ALLOWED_ACTIONS:
+                    return lambda: FakeFunction()
+                raise AttributeError(name)
 
         class FakeContract:
             functions = FakeFunctions()
 
             def decode_function_input(self, data):
-                return type("DecodedFunction", (), {"fn_name": "protectedAction"})(), {}
+                return type("DecodedFunction", (), {"fn_name": action})(), {}
 
         class FakeEth:
             block_number = head_block
@@ -170,6 +173,93 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         return patch.object(backend_module, "rpc_ready"), patch.object(
             backend_module, "w3", fake_web3
         ), patch.object(backend_module, "get_contract", return_value=FakeContract())
+
+    def _mock_prepare_contract(self, paused=False):
+        owner = self.account.address
+        encodings = {"pause": "0x11111111", "unpause": "0x22222222",
+                     "protectedAction": "0x12345678"}
+
+        class FakeFunction:
+            def __init__(self, name):
+                self.name = name
+
+            def call(self):
+                return owner if self.name == "owner" else paused
+
+            def _encode_transaction_data(self):
+                return encodings[self.name]
+
+        class FakeFunctions:
+            def __getattr__(self, name):
+                if name in {"owner", "paused", *backend_module.ALLOWED_ACTIONS}:
+                    return lambda: FakeFunction(name)
+                raise AttributeError(name)
+
+        class FakeContract:
+            address = backend_module.CONTRACT_ADDRESS
+            functions = FakeFunctions()
+
+        return FakeContract()
+
+    def test_prepare_transaction_returns_unsigned_payload_for_each_action(self):
+        contract = self._mock_prepare_contract(paused=False)
+        for action, expected_data in (
+            ("pause", "0x11111111"),
+            ("protectedAction", "0x12345678"),
+        ):
+            headers = self._login_headers() if action == "protectedAction" else {}
+            with patch.object(backend_module, "rpc_ready"), patch.object(
+                backend_module, "get_contract", return_value=contract
+            ):
+                response = self.client.post(
+                    "/api/transactions/prepare",
+                    json={"action": action, "from": self.account.address},
+                    headers=headers,
+                )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            body = response.get_json()
+            self.assertTrue(body["ready"])
+            self.assertEqual(body["transaction"]["data"], expected_data)
+            self.assertEqual(body["transaction"]["value"], "0x0")
+            self.assertEqual(int(body["transaction"]["chainId"], 16), backend_module.CHAIN_ID)
+
+    def test_prepare_transaction_rejects_non_owner_admin_action(self):
+        contract = self._mock_prepare_contract(paused=False)
+        other = Account.create()
+        with patch.object(backend_module, "rpc_ready"), patch.object(
+            backend_module, "get_contract", return_value=contract
+        ):
+            response = self.client.post(
+                "/api/transactions/prepare",
+                json={"action": "pause", "from": other.address},
+            )
+        self.assertEqual(response.status_code, 403)
+
+    def test_prepare_transaction_rejects_protected_action_without_login(self):
+        contract = self._mock_prepare_contract(paused=False)
+        with patch.object(backend_module, "rpc_ready"), patch.object(
+            backend_module, "get_contract", return_value=contract
+        ):
+            response = self.client.post(
+                "/api/transactions/prepare",
+                json={"action": "protectedAction", "from": self.account.address},
+            )
+        self.assertEqual(response.status_code, 401)
+
+    def test_confirm_transaction_validates_admin_actions_without_spending_credits(self):
+        for action, calldata in (("pause", "0x11111111"), ("unpause", "0x22222222")):
+            p1, p2, p3 = self._mock_confirm_chain(
+                action=action, calldata=calldata, head_block=251, receipt_block=250
+            )
+            with p1, p2, p3:
+                response = self.client.post(
+                    "/api/transactions/confirm",
+                    json={"transactionHash": "0x" + "ac" * 32,
+                          "action": action, "from": self.account.address},
+                )
+            self.assertEqual(response.status_code, 200, response.get_json())
+            self.assertTrue(response.get_json()["confirmed"])
+            self.assertIsNone(response.get_json()["paidAccess"])
 
     def test_confirm_transaction_rejects_wrong_chain_id(self):
         headers = self._login_headers()
