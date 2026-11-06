@@ -8,11 +8,12 @@
   <style>
     body{margin:0;font-family:Arial,sans-serif;background:#0b1220;color:#fff;text-align:center}
     header{background:#15243d;padding:20px}
-    main{max-width:650px;margin:35px auto;padding:15px}
+    main{max-width:680px;margin:35px auto;padding:15px}
     .panel{background:#192943;padding:24px;margin:18px 0;border-radius:12px}
     button{background:#20a8e0;color:#fff;padding:12px 18px;border:0;border-radius:8px;margin:6px;cursor:pointer}
     button:disabled{opacity:.4;cursor:not-allowed}
-    #txStatus,#walletAddress,#ownerAddress{overflow-wrap:anywhere}
+    #txStatus,#walletAddress,#ownerAddress,#paidAccessStatus{overflow-wrap:anywhere}
+    .muted{color:#b7c5d9;font-size:.92rem}
     footer{padding:25px;color:#aab6c9}
   </style>
   <script src="wallet.js" defer></script>
@@ -28,6 +29,14 @@
       <p id="walletAddress">Wallet not connected</p>
     </section>
     <section class="panel">
+      <h2>PORTLG Paid Access</h2>
+      <p class="muted">Sign a one-time message to authenticate. Signing in does not transfer tPOT or authorize a payment.</p>
+      <button id="signInBtn" disabled>Sign in with MetaMask</button>
+      <button id="recoverBtn" disabled>Recover locked account</button>
+      <p id="paidAccessStatus">Connect MetaMask to view trial and credits.</p>
+      <p class="muted">Trial: 7 days · Initial allowance: 10 credits · Payment integration is not enabled yet.</p>
+    </section>
+    <section class="panel">
       <h2>Contract Status</h2>
       <p id="contractStatus">Not connected</p>
       <p id="ownerAddress"></p>
@@ -38,6 +47,7 @@
       <button id="pauseBtn" disabled>Pause</button>
       <button id="unpauseBtn" disabled>Unpause</button>
       <button id="actionBtn" disabled>Protected Action</button>
+      <p class="muted">Pause and Unpause are owner-only on-chain controls. Protected Action requires an active Paid Access session.</p>
     </section>
     <section class="panel">
       <h2>On-chain Event Log</h2>
