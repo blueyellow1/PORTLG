@@ -130,14 +130,23 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         receipt_hash = block_hash if canonical else "0x" + "22" * 32
         sender = self.account.address
 
+        expected_calldata = {
+            "pause": "0x11111111",
+            "unpause": "0x22222222",
+            "protectedAction": "0x12345678",
+        }
+
         class FakeFunction:
+            def __init__(self, name):
+                self.name = name
+
             def _encode_transaction_data(self):
-                return calldata
+                return expected_calldata[self.name]
 
         class FakeFunctions:
             def __getattr__(self, name):
                 if name in backend_module.ALLOWED_ACTIONS:
-                    return lambda: FakeFunction()
+                    return lambda: FakeFunction(name)
                 raise AttributeError(name)
 
         class FakeContract:
