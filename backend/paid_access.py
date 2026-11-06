@@ -126,10 +126,14 @@ def verify_signature(wallet, nonce, signature):
             "UPDATE paid_access_challenges SET consumed = 1 WHERE nonce = ?",
             (nonce,),
         )
-        recovered = Account.recover_message(
-            encode_defunct(text=challenge["message"]), signature=signature
-        )
-        if Web3.to_checksum_address(recovered) != wallet:
+        try:
+            recovered = Account.recover_message(
+                encode_defunct(text=challenge["message"]), signature=signature
+            )
+            recovered_wallet = Web3.to_checksum_address(recovered)
+        except Exception as exc:
+            raise ValueError("The MetaMask signature is invalid.") from exc
+        if recovered_wallet != wallet:
             raise ValueError("The MetaMask signature does not match this wallet.")
 
         user = db.execute(
