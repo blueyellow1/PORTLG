@@ -29,6 +29,14 @@ app = Flask(__name__)
 w3 = Web3(Web3.HTTPProvider(RPC_URL, request_kwargs={"timeout": 15}))
 
 ALLOWED_ACTIONS = {"pause", "unpause", "protectedAction"}
+MIN_TX_CONFIRMATIONS = max(1, int(os.getenv("PORTLG_TX_CONFIRMATIONS", "1")))
+
+
+def _hex_value(value):
+    """Normalize Web3 byte/hash values for safe comparisons."""
+    if isinstance(value, str):
+        return value.lower() if value.startswith("0x") else "0x" + value.lower()
+    return Web3.to_hex(value) .lower()
 
 
 def get_contract():
@@ -235,7 +243,7 @@ def prepare_transaction():
 
 @app.post("/api/transactions/confirm")
 def confirm_transaction():
-    """Verify a submitted transaction and its successful on-chain receipt."""
+    """Verify chain, sender, calldata, receipt inclusion and confirmations."""
     payload = request.get_json(silent=True) or {}
     tx_hash = payload.get("transactionHash")
     expected_action = payload.get("action")
@@ -264,17 +272,46 @@ def confirm_transaction():
         rpc_ready()
         tx = w3.eth.get_transaction(tx_hash)
         receipt = w3.eth.get_transaction_receipt(tx_hash)
-        if Web3.to_checksum_address(tx["to"]) != CONTRACT_ADDRESS:
+
+        if not tx.get("to") or Web3.to_checksum_address(tx["to"]) != CONTRACT_ADDRESS:
             return jsonify(error="Transaction destination does not match PORTLGuardLite."), 400
         if Web3.to_checksum_address(tx["from"]) != Web3.to_checksum_address(expected_sender):
             return jsonify(error="Transaction sender does not match the connected wallet."), 400
+        try:
+            tx_chain_id = int(tx["chainId"])
+        except (KeyError, TypeError, ValueError):
+            return jsonify(error="Transaction is missing a valid chain ID."), 400
+        if tx_chain_id != CHAIN_ID:
+            return jsonify(error="Transaction was submitted on the wrong network."), 400
+        if int(tx.get("value", 0)) != 0:
+            return jsonify(error="PORTLG contract actions must not transfer native currency."), 400
+
         if receipt["status"] != 1:
             return jsonify(confirmed=False, status="failed", transactionHash=tx_hash), 409
 
         contract = get_contract()
-        function, params = contract.decode_function_input(tx["input"])
-        if function.fn_name != expected_action:
+        actual_calldata = tx.get("input", tx.get("data", "0x"))
+        function, params = contract.decode_function_input(actual_calldata)
+        if function.fn_name != expected_action or params:
             return jsonify(error="Confirmed transaction does not match the requested action."), 400
+        expected_calldata = getattr(contract.functions, expected_action)()._encode_transaction_data()
+        if actual_calldata.lower() != expected_calldata.lower():
+            return jsonify(error="Transaction calldata does not match the expected contract action."), 400
+
+        receipt_block = int(receipt["blockNumber"])
+        canonical_block = w3.eth.get_block(receipt_block)
+        if _hex_value(canonical_block["hash"]) != _hex_value(receipt["blockHash"]):
+            return jsonify(error="Transaction receipt is not in the canonical chain."), 409
+
+        confirmations = int(w3.eth.block_number) - receipt_block + 1
+        if confirmations < MIN_TX_CONFIRMATIONS:
+            return jsonify(
+                confirmed=False,
+                status="pending",
+                transactionHash=tx_hash,
+                confirmations=max(0, confirmations),
+                requiredConfirmations=MIN_TX_CONFIRMATIONS,
+            ), 202
 
         credit_result = None
         if expected_action == "protectedAction":
@@ -294,8 +331,9 @@ def confirm_transaction():
             status="success",
             action=function.fn_name,
             transactionHash=tx_hash,
-            blockNumber=receipt["blockNumber"],
+            blockNumber=receipt_block,
             gasUsed=receipt["gasUsed"],
+            confirmations=confirmations,
         )
     except Exception as exc:
         app.logger.exception("Transaction confirmation failed")
