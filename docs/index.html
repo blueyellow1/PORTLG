@@ -1,57 +1,99 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PORTLG | Project Files</title>
-<style>
-:root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#091426;color:#e8f0ff;font:16px/1.6 Arial,sans-serif}header{padding:42px 20px;background:linear-gradient(120deg,#102b4b,#173b5c);text-align:center}header h1{margin:0;font-size:32px}header p{color:#b8cce3;margin:8px 0 0}main{max-width:1050px;margin:30px auto;padding:0 18px}.intro,.folder{background:#12243c;border:1px solid #294363;border-radius:14px;padding:22px;margin:18px 0}.folder h2{margin:0 0 8px;color:#7dd3fc}.folder p,.intro p{color:#bdcde0}.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.file{display:block;padding:12px 14px;border-radius:9px;background:#0b1a2e;border:1px solid #294363;text-decoration:none;color:#e5f3ff}.file:hover{border-color:#38bdf8;background:#112b48}.file strong{display:block;color:#8bdcff}.file span{font-size:13px;color:#b8c8db}a{color:#7dd3fc}footer{text-align:center;padding:25px;color:#91a6bf}
-</style></head><body>
-<header><h1>PORTLG Wallet — Project Directory</h1><p>Repository structure, source code and engineering documentation</p></header>
-<main>
-<section class="intro"><h2>Repository overview</h2><p>This directory provides direct navigation to the organized PORTLG source tree. It complements the wallet demonstration and links to the corresponding files in the public GitHub repository.</p><p><a href="../">← Return to PORTLG Wallet</a> · <a href="https://github.com/blueyellow1/PORTLG">Open repository on GitHub</a></p></section>
-<section class="folder"><h2>Root files</h2><p>Project overview, environment template and dependency configuration.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/README.md"><strong>README.md</strong><span>Project overview and setup</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/.env.example"><strong>.env.example</strong><span>Environment configuration template</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/.gitignore"><strong>.gitignore</strong><span>Excluded local and generated files</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/requirements.txt"><strong>requirements.txt</strong><span>Python dependencies</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/index.html"><strong>index.html</strong><span>GitHub Pages wallet demonstration</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/wallet.js"><strong>wallet.js</strong><span>Wallet interaction script for the hosted demo</span></a>
-</div></section>
-<section class="folder"><h2>contracts/</h2><p>Solidity implementation and contract-specific notes.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/contracts"><strong>contracts/</strong><span>Browse folder</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/contracts/PORTLGuardLite.sol"><strong>PORTLGuardLite.sol</strong><span>Owner-controlled pause and protected action</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/contracts/README.md"><strong>README.md</strong><span>Contract responsibilities and behavior</span></a>
-</div></section>
-<section class="folder"><h2>frontend/</h2><p>Organized frontend source used by the Flask application.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/frontend"><strong>frontend/</strong><span>Browse folder</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/frontend/index.html"><strong>index.html</strong><span>Wallet interface and security controls</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/frontend/wallet.js"><strong>wallet.js</strong><span>MetaMask and backend API integration</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/frontend/README.md"><strong>README.md</strong><span>Frontend setup and behavior</span></a>
-</div></section>
-<section class="folder"><h2>backend/</h2><p>Flask API for contract-state checks, transaction preparation and verification.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/backend"><strong>backend/</strong><span>Browse folder</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/backend/app.py"><strong>app.py</strong><span>Flask application and API routes</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/backend/requirements.txt"><strong>requirements.txt</strong><span>Backend dependencies</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/backend/README.md"><strong>README.md</strong><span>API contract and security boundaries</span></a>
-</div></section>
-<section class="folder"><h2>scripts/</h2><p>Compilation and controlled local deployment utilities.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/scripts"><strong>scripts/</strong><span>Browse folder</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/scripts/compile_contract.py"><strong>compile_contract.py</strong><span>Compile Solidity source and generate ABI</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/scripts/deploy.py"><strong>deploy.py</strong><span>Local development deployment utility</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/scripts/README.md"><strong>README.md</strong><span>Build and deployment instructions</span></a>
-</div></section>
-<section class="folder"><h2>tests/</h2><p>Local EVM contract tests and mocked backend API tests.</p><div class="files">
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/tests"><strong>tests/</strong><span>Browse folder</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/tests/test_portlguardlite.py"><strong>test_portlguardlite.py</strong><span>Contract behavior tests</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/tests/test_backend_api.py"><strong>test_backend_api.py</strong><span>Backend validation tests</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/blob/main/tests/README.md"><strong>README.md</strong><span>Test execution and evidence policy</span></a>
-</div></section>
-<section class="folder"><h2>docs/</h2><p>Technical documentation for architecture, network, deployment, security and demonstration.</p><div class="files">
-<a class="file" href="ARCHITECTURE.md"><strong>ARCHITECTURE.md</strong><span>System components and transaction flow</span></a>
-<a class="file" href="NETWORK.md"><strong>NETWORK.md</strong><span>Portaldot V3 configuration</span></a>
-<a class="file" href="DEPLOYMENT.md"><strong>DEPLOYMENT.md</strong><span>Existing deployment record</span></a>
-<a class="file" href="SECURITY.md"><strong>SECURITY.md</strong><span>Security model and limitations</span></a>
-<a class="file" href="DEMO.md"><strong>DEMO.md</strong><span>Technical demonstration procedure</span></a>
-<a class="file" href="PORTALDOT_GUIDE_MAPPING.md"><strong>PORTALDOT_GUIDE_MAPPING.md</strong><span>Developer guide alignment</span></a>
-<a class="file" href="README.md"><strong>README.md</strong><span>Documentation index</span></a>
-<a class="file" href="TEST_REPORT.md"><strong>TEST_REPORT.md</strong><span>Automated test execution report — 11 passed</span></a>
-<a class="file" href="https://github.com/blueyellow1/PORTLG/tree/main/.github/workflows"><strong>.github/workflows/</strong><span>Continuous integration workflow directory</span></a>
-</div></section>
-</main><footer>PORTLG Wallet · Portaldot V3 Testnet · Experimental testnet project</footer></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#091426">
+  <title>PORTLG Wallet | Documentation</title>
+  <style>
+    :root{color-scheme:dark;--bg:#091426;--panel:#12243c;--panel2:#0b1a2e;--line:#294363;--text:#e8f0ff;--muted:#bdcde0;--accent:#7dd3fc}
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.65 Arial,sans-serif}
+    header{padding:54px 20px 46px;text-align:center;background:linear-gradient(120deg,#102b4b,#173b5c);border-bottom:1px solid var(--line)}
+    header .eyebrow{margin:0 0 8px;color:var(--accent);font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+    header h1{margin:0;font-size:clamp(28px,5vw,40px);line-height:1.2}
+    header p{max-width:700px;margin:14px auto 0;color:#c6d8eb}
+    main{width:min(1080px,calc(100% - 36px));margin:32px auto 48px}
+    .intro,.section{padding:24px;margin:18px 0;background:var(--panel);border:1px solid var(--line);border-radius:14px}
+    .intro h2,.section h2{margin:0 0 8px;font-size:21px}
+    .intro p,.section>p{margin:6px 0 16px;color:var(--muted)}
+    .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+    .action{display:inline-block;padding:9px 13px;border:1px solid #3b6689;border-radius:8px;color:var(--accent);text-decoration:none;font-weight:700}
+    .action:hover,.item:hover{border-color:var(--accent);background:#112b48}
+    .section h2{color:var(--accent)}
+    .items{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px}
+    .item{display:block;min-height:86px;padding:13px 15px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--text);text-decoration:none}
+    .item strong{display:block;margin-bottom:3px;color:#e5f3ff}
+    .item span{display:block;color:var(--muted);font-size:13px;line-height:1.45}
+    .note{padding:15px 17px;border-left:3px solid var(--accent);background:#0b1a2e;color:var(--muted);border-radius:0 8px 8px 0}
+    footer{padding:24px;text-align:center;color:#91a6bf;border-top:1px solid var(--line);font-size:13px}
+    a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  </style>
+</head>
+<body>
+  <header>
+    <p class="eyebrow">Project documentation</p>
+    <h1>PORTLG Wallet</h1>
+    <p>Explore the application, smart contract, system architecture, deployment record and test evidence in one place.</p>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h2>Start here</h2>
+      <p>PORTLG is a MetaMask-connected wallet interface and smart-contract security prototype for Portaldot V3 Testnet. This directory is organized to help reviewers move from the project overview to implementation details and verification evidence.</p>
+      <div class="actions">
+        <a class="action" href="../">Open wallet demonstration</a>
+        <a class="action" href="https://github.com/blueyellow1/PORTLG">Browse GitHub repository</a>
+        <a class="action" href="../README.md">Read project README</a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>01 — Application</h2>
+      <p>The browser entry point and application components.</p>
+      <div class="items">
+        <a class="item" href="../index.html"><strong>Browser demonstration</strong><span>Hosted PORTLG interface entry point</span></a>
+        <a class="item" href="../wallet.js"><strong>Wallet interaction script</strong><span>Browser-side wallet functionality</span></a>
+        <a class="item" href="../frontend/index.html"><strong>Frontend application</strong><span>Wallet interface served by the Flask application</span></a>
+        <a class="item" href="../backend/app.py"><strong>Backend API</strong><span>Flask routes and transaction preparation</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>02 — Smart contract and network</h2>
+      <p>Review the deployed contract source and the test network configuration.</p>
+      <div class="items">
+        <a class="item" href="../contracts/PORTLGuardLite.sol"><strong>PORTLGuardLite.sol</strong><span>Owner-controlled pause state and protected action</span></a>
+        <a class="item" href="NETWORK.md"><strong>Network configuration</strong><span>Portaldot V3 Testnet settings</span></a>
+        <a class="item" href="DEPLOYMENT.md"><strong>Deployment record</strong><span>Recorded contract address and deployment evidence</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>03 — Engineering documentation</h2>
+      <p>Understand the system design, security boundaries and demonstration workflow.</p>
+      <div class="items">
+        <a class="item" href="ARCHITECTURE.md"><strong>System architecture</strong><span>Components, data flow and trust boundaries</span></a>
+        <a class="item" href="SECURITY.md"><strong>Security model</strong><span>Implemented controls, assumptions and limitations</span></a>
+        <a class="item" href="DEMO.md"><strong>Demonstration procedure</strong><span>Steps for reviewing the prototype</span></a>
+      </div>
+    </section>
+
+    <section class="section">
+      <h2>04 — Testing and verification</h2>
+      <p>Review the automated test report and instructions for reproducing the test run.</p>
+      <div class="items">
+        <a class="item" href="TEST_REPORT.md"><strong>Automated test report</strong><span>Recorded results: 11 passed, 0 failed, 0 skipped</span></a>
+        <a class="item" href="../tests/README.md"><strong>Test instructions</strong><span>Test setup, execution and scope</span></a>
+        <a class="item" href="https://github.com/blueyellow1/PORTLG/actions/runs/42174663605"><strong>GitHub Actions run</strong><span>View the recorded continuous-integration run</span></a>
+      </div>
+    </section>
+
+    <div class="note">
+      <strong>Scope note:</strong> PORTLG is a testnet prototype. MetaMask handles transaction signing; the contract does not perform autonomous threat detection or automatic incident response. The project has not undergone an independent security audit.
+    </div>
+  </main>
+
+  <footer>PORTLG Wallet · Portaldot V3 Testnet · Experimental project</footer>
+</body>
+</html>
