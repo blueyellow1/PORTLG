@@ -94,6 +94,54 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         self.assertEqual(self.client.post("/api/paid-access/verify", json=payload).status_code, 200)
         self.assertEqual(self.client.post("/api/paid-access/verify", json=payload).status_code, 401)
 
+    def test_credit_is_consumed_once_per_confirmed_transaction(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        signed = Account.sign_message(
+            encode_defunct(text=challenge["message"]), self.account.key
+        )
+        login = self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": signed.signature.hex(),
+            },
+        ).get_json()
+        tx_hash = "0x" + "ab" * 32
+        first = paid_access.consume_credit(self.account.address, tx_hash)
+        self.assertTrue(first["consumed"])
+        self.assertEqual(first["account"]["creditsRemaining"], 9)
+        second = paid_access.consume_credit(self.account.address, tx_hash)
+        self.assertFalse(second["consumed"])
+        self.assertEqual(second["reason"], "transaction_already_used")
+        status = self.client.get(
+            "/api/paid-access/status",
+            headers={"Authorization": f"Bearer {login['token']}"},
+        ).get_json()
+        self.assertEqual(status["account"]["creditsRemaining"], 9)
+
+    def test_locked_account_cannot_consume_credit(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        signed = Account.sign_message(
+            encode_defunct(text=challenge["message"]), self.account.key
+        )
+        self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": signed.signature.hex(),
+            },
+        )
+        self.assertTrue(paid_access.lock_account(self.account.address, 10, "test fraud signal"))
+        result = paid_access.consume_credit(self.account.address, "0x" + "cd" * 32)
+        self.assertFalse(result["consumed"])
+        self.assertEqual(result["reason"], "account_locked")
+
     def test_status_requires_valid_session(self):
         response = self.client.get("/api/paid-access/status")
         self.assertEqual(response.status_code, 401)
