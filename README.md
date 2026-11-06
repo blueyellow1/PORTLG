@@ -85,10 +85,14 @@ The contract emits events including `Paused`, `Unpaused` and `SecurityAlert`.
 | RPC endpoint | [Portaldot V3 RPC](https://test-evm-rpc-v3.portaldot.dev) |
 | Contract | `PORTLGuardLite` |
 | Address | `0x44406CD3e7ccE420c316D015FEE74303F16629E5` |
-| Deployment block | `200641` (block identified in reviewer feedback; creation extrinsic still to be matched) |
-| Deployment transaction | **Not yet confirmed** — the previously listed hash was identified as a `protectedAction()` call, not contract creation. |
+| Deployment block | `200580` |
+| Deployment transaction | `0x6115a0880f1822ba7b43c5b0461323eaebab701f12ce22b81325a3d2b1e5d879` |
+| Deployment status | Success (`0x1`) |
+| Deployer | `0xde8547c35e4eb0cf3850a3f67def1defd4d43594` |
 
-**Deployment evidence clarification:** The reviewer confirmed that the contract exists at this address and referenced block `200641`. The previously listed transaction hash `0x6115a0880f1822ba7b43c5b0461323eaebab701f12ce22b81325a3d2b1e5d879` has input selector `0x3d7b369a` (`protectedAction()`), so it is a contract interaction and must not be presented as the deployment transaction. The exact contract-creation transaction remains to be identified; no replacement hash is guessed here.
+**Deployment evidence:** The deployment transaction was independently checked through the Portaldot V3 RPC in Google Colab. Its successful receipt (`0x1`) matches this contract address and block `200580`; its input begins with contract-creation bytecode (`0x60806040`). The Portaldot Scanner also shows the `revive(Instantiated)` event for this contract at block `200580`.
+
+**Separate contract interaction:** Block `200641` contains a `revive(ContractEmitted)` event for this contract, corresponding to the later `protectedAction()` interaction and its `Protected action executed` alert. It is not the deployment block or deployment transaction.
 
 See [Network configuration](docs/NETWORK.md) and [Deployment record](docs/DEPLOYMENT.md) for further details.
 
