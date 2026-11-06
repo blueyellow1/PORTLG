@@ -79,6 +79,33 @@ class TestPaidAccessAuthentication(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 401)
 
+    def test_malformed_signature_returns_401_instead_of_server_error(self):
+        challenge = self.client.post(
+            "/api/paid-access/challenge", json={"wallet": self.account.address}
+        ).get_json()
+        response = self.client.post(
+            "/api/paid-access/verify",
+            json={
+                "wallet": self.account.address,
+                "nonce": challenge["nonce"],
+                "signature": "not-a-valid-signature",
+            },
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertIn("signature is invalid", response.get_json()["error"])
+
+    def test_transaction_confirmation_rejects_malformed_hash(self):
+        response = self.client.post(
+            "/api/transactions/confirm",
+            json={
+                "transactionHash": "0x" + "zz" * 32,
+                "action": "protectedAction",
+                "from": self.account.address,
+            },
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("transaction hash", response.get_json()["error"])
+
     def test_challenge_cannot_be_reused(self):
         challenge = self.client.post(
             "/api/paid-access/challenge", json={"wallet": self.account.address}
