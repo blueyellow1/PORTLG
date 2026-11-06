@@ -78,10 +78,15 @@ class TestBackendTransactionAPI(unittest.TestCase):
     def test_protected_action_is_rejected_when_paused(self, get_contract, rpc_ready):
         owner = "0x0000000000000000000000000000000000000001"
         get_contract.return_value = self.make_contract(owner, paused=True)
-        response = self.client.post(
-            "/api/transactions/prepare",
-            json={"action": "protectedAction", "from": owner},
-        )
+        with patch.object(
+            backend_module,
+            "_session_account",
+            return_value={"wallet": owner, "accessAllowed": True},
+        ):
+            response = self.client.post(
+                "/api/transactions/prepare",
+                json={"action": "protectedAction", "from": owner},
+            )
         self.assertEqual(response.status_code, 409)
 
 
