@@ -5,6 +5,7 @@ on:
     branches: ["paid-access-tpot"]
     paths:
       - "backend/**"
+      - "frontend/**"
       - "tests/test_paid_access.py"
       - "requirements.txt"
       - ".github/workflows/paid-access-tests.yml"
@@ -12,6 +13,7 @@ on:
     branches: ["main"]
     paths:
       - "backend/**"
+      - "frontend/**"
       - "tests/test_paid_access.py"
       - "requirements.txt"
       - ".github/workflows/paid-access-tests.yml"
@@ -28,5 +30,7 @@ jobs:
           python-version: "3.11"
       - name: Install dependencies
         run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Check frontend JavaScript syntax
+        run: node --check frontend/wallet.js
       - name: Run Paid Access tests
         run: python -m unittest tests.test_paid_access -v
