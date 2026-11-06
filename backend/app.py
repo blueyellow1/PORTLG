@@ -11,12 +11,14 @@ from dotenv import load_dotenv
 from flask import Flask, jsonify, request, send_from_directory
 from web3 import Web3
 
+from backend import paid_access
+
 ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT / ".env")
 
 RPC_URL = os.getenv("RPC_URL", "https://test-evm-rpc-v3.portaldot.dev")
 CONTRACT_ADDRESS = Web3.to_checksum_address(
-    os.getenv("CONTRACT_ADDRESS", "0x44406CD3e7ccE420c316D015FEE74303F16629E5")
+    os.getenv("CONTRACT_ADDRESS", "0x44406CD3e7cce420c316D015FEE74303F16629E5")
 )
 CHAIN_ID = int(os.getenv("CHAIN_ID", "420420777"))
 EVENTS_FROM_BLOCK = int(os.getenv("EVENTS_FROM_BLOCK", "200580"))
@@ -45,6 +47,13 @@ def rpc_ready():
         )
 
 
+def _session_account():
+    authorization = request.headers.get("Authorization", "")
+    if not authorization.startswith("Bearer "):
+        return None
+    return paid_access.get_session_account(authorization[7:])
+
+
 @app.get("/")
 def index():
     return send_from_directory(ROOT / "frontend", "index.html")
@@ -67,6 +76,37 @@ def health():
 @app.get("/api/config")
 def config():
     return jsonify(address=CONTRACT_ADDRESS, chainId=CHAIN_ID)
+
+
+@app.post("/api/paid-access/challenge")
+def paid_access_challenge():
+    payload = request.get_json(silent=True) or {}
+    try:
+        return jsonify(paid_access.create_challenge(payload.get("wallet")))
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 400
+
+
+@app.post("/api/paid-access/verify")
+def paid_access_verify():
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = paid_access.verify_signature(
+            payload.get("wallet"), payload.get("nonce"), payload.get("signature")
+        )
+        return jsonify(authenticated=True, **result)
+    except PermissionError as exc:
+        return jsonify(error=str(exc)), 423
+    except ValueError as exc:
+        return jsonify(error=str(exc)), 401
+
+
+@app.get("/api/paid-access/status")
+def paid_access_status():
+    account = _session_account()
+    if not account:
+        return jsonify(error="A valid PORTLG wallet session is required."), 401
+    return jsonify(account=account)
 
 
 @app.get("/api/status")
