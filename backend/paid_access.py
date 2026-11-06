@@ -61,6 +61,26 @@ def init_db():
                 action TEXT NOT NULL,
                 spent_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS paid_access_auth_attempts (
+                ip_hash TEXT PRIMARY KEY,
+                window_started_at INTEGER NOT NULL,
+                failures INTEGER NOT NULL DEFAULT 0,
+                blocked_until INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS paid_access_recovery_challenges (
+                nonce TEXT PRIMARY KEY,
+                wallet TEXT NOT NULL,
+                message TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                consumed INTEGER NOT NULL DEFAULT 0
+            );
+            CREATE TABLE IF NOT EXISTS paid_access_security_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                wallet TEXT NOT NULL DEFAULT '',
+                event TEXT NOT NULL,
+                details TEXT NOT NULL DEFAULT '',
+                created_at INTEGER NOT NULL
+            );
             """
         )
 
@@ -233,3 +253,175 @@ def consume_credit(wallet, transaction_hash, action="protectedAction"):
             "SELECT * FROM paid_access_users WHERE wallet = ?", (wallet,)
         ).fetchone()
         return {"consumed": True, "account": _account_status(updated, now)}
+
+
+
+# Authentication abuse controls. The IP is hashed before storage; raw IPs are
+# not persisted. Configure trusted proxy handling at the hosting layer.
+AUTH_FAILURE_LIMIT = int(os.getenv("PORTLG_AUTH_FAILURE_LIMIT", "5"))
+AUTH_WINDOW_SECONDS = int(os.getenv("PORTLG_AUTH_WINDOW_SECONDS", "600"))
+AUTH_BLOCK_SECONDS = int(os.getenv("PORTLG_AUTH_BLOCK_SECONDS", "900"))
+
+
+def _ip_digest(ip_address):
+    if not isinstance(ip_address, str) or not ip_address:
+        ip_address = "unknown"
+    return hashlib.sha256(ip_address.encode("utf-8")).hexdigest()
+
+
+def check_auth_rate_limit(ip_address):
+    """Return seconds remaining when an IP is blocked, otherwise zero."""
+    now = int(time.time())
+    digest = _ip_digest(ip_address)
+    init_db()
+    with _connect() as db:
+        row = db.execute(
+            "SELECT blocked_until FROM paid_access_auth_attempts WHERE ip_hash = ?",
+            (digest,),
+        ).fetchone()
+        if row and row["blocked_until"] > now:
+            return row["blocked_until"] - now
+        return 0
+
+
+def record_auth_failure(ip_address, wallet="", reason="Invalid wallet authentication"):
+    """Throttle repeated failed signatures by source IP, not by target wallet.
+
+    This avoids letting an attacker lock an unrelated victim's wallet merely
+    by submitting invalid signatures against that wallet.
+    """
+    now = int(time.time())
+    digest = _ip_digest(ip_address)
+    init_db()
+    with _connect() as db:
+        row = db.execute(
+            "SELECT * FROM paid_access_auth_attempts WHERE ip_hash = ?", (digest,)
+        ).fetchone()
+        if row is None or now - row["window_started_at"] >= AUTH_WINDOW_SECONDS:
+            failures = 1
+            window_started = now
+            blocked_until = 0
+        else:
+            failures = int(row["failures"]) + 1
+            window_started = row["window_started_at"]
+            blocked_until = now + AUTH_BLOCK_SECONDS if failures >= AUTH_FAILURE_LIMIT else row["blocked_until"]
+        db.execute(
+            """INSERT INTO paid_access_auth_attempts
+               (ip_hash, window_started_at, failures, blocked_until)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(ip_hash) DO UPDATE SET
+                 window_started_at=excluded.window_started_at,
+                 failures=excluded.failures,
+                 blocked_until=excluded.blocked_until""",
+            (digest, window_started, failures, blocked_until),
+        )
+        db.execute(
+            """INSERT INTO paid_access_security_logs(wallet, event, details, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (str(wallet or "")[:42], "authentication_failure", str(reason)[:240], now),
+        )
+        return max(0, blocked_until - now)
+
+
+def record_security_event(wallet, event, details=""):
+    """Store a minimal security audit event; never store signatures or secrets."""
+    now = int(time.time())
+    wallet_value = str(wallet or "")[:42]
+    with _connect() as db:
+        db.execute(
+            """INSERT INTO paid_access_security_logs(wallet, event, details, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (wallet_value, str(event)[:80], str(details)[:240], now),
+        )
+
+
+def create_recovery_challenge(wallet):
+    """Create a wallet-signature challenge to recover a temporarily locked account."""
+    if not isinstance(wallet, str) or not Web3.is_address(wallet):
+        raise ValueError("A valid wallet address is required.")
+    wallet = Web3.to_checksum_address(wallet)
+    now = int(time.time())
+    init_db()
+    with _connect() as db:
+        user = db.execute(
+            "SELECT * FROM paid_access_users WHERE wallet = ?", (wallet,)
+        ).fetchone()
+        if user is None:
+            raise ValueError("No PORTLG Paid Access account exists for this wallet.")
+        if user["locked_until"] <= now:
+            raise ValueError("This account is not currently locked.")
+        nonce = secrets.token_urlsafe(32)
+        message = (
+            "PORTLG Paid Access account recovery\n"
+            f"Wallet: {wallet}\n"
+            f"Network Chain ID: {CHAIN_ID}\n"
+            f"Nonce: {nonce}\n"
+            "Purpose: Request account recovery only. This message does not authorize a token transfer."
+        )
+        db.execute(
+            """INSERT INTO paid_access_recovery_challenges
+               (nonce, wallet, message, expires_at) VALUES (?, ?, ?, ?)""",
+            (nonce, wallet, message, now + 5 * 60),
+        )
+    return {"wallet": wallet, "nonce": nonce, "message": message, "expiresIn": 300}
+
+
+def recover_account(wallet, nonce, signature):
+    """Unlock only after the locked wallet proves ownership with a fresh signature."""
+    if not isinstance(wallet, str) or not Web3.is_address(wallet):
+        raise ValueError("A valid wallet address is required.")
+    if not isinstance(nonce, str) or not isinstance(signature, str):
+        raise ValueError("A valid recovery nonce and signature are required.")
+    wallet = Web3.to_checksum_address(wallet)
+    now = int(time.time())
+    init_db()
+    with _connect() as db:
+        challenge = db.execute(
+            """SELECT * FROM paid_access_recovery_challenges
+               WHERE nonce = ? AND wallet = ?""",
+            (nonce, wallet),
+        ).fetchone()
+        if not challenge or challenge["consumed"] or challenge["expires_at"] < now:
+            raise ValueError("This recovery request is invalid, expired or already used.")
+        db.execute(
+            "UPDATE paid_access_recovery_challenges SET consumed = 1 WHERE nonce = ?",
+            (nonce,),
+        )
+        try:
+            recovered = Account.recover_message(
+                encode_defunct(text=challenge["message"]), signature=signature
+            )
+        except Exception as exc:
+            raise ValueError("The recovery signature is invalid.") from exc
+        if Web3.to_checksum_address(recovered) != wallet:
+            raise ValueError("The recovery signature does not match this wallet.")
+        cursor = db.execute(
+            """UPDATE paid_access_users
+               SET locked_until = 0, lock_reason = ''
+               WHERE wallet = ? AND locked_until > ?""",
+            (wallet, now),
+        )
+        if cursor.rowcount != 1:
+            raise ValueError("The account is no longer locked or could not be recovered.")
+        db.execute(
+            """INSERT INTO paid_access_security_logs(wallet, event, details, created_at)
+               VALUES (?, ?, ?, ?)""",
+            (wallet, "account_recovered", "Wallet ownership re-verified with a fresh signature", now),
+        )
+        user = db.execute(
+            "SELECT * FROM paid_access_users WHERE wallet = ?", (wallet,)
+        ).fetchone()
+        return _account_status(user, now)
+
+
+def get_security_logs(limit=100):
+    """Internal/admin use only. Do not expose this function without admin auth."""
+    limit = max(1, min(int(limit), 500))
+    init_db()
+    with _connect() as db:
+        rows = db.execute(
+            """SELECT wallet, event, details, created_at
+               FROM paid_access_security_logs ORDER BY id DESC LIMIT ?""",
+            (limit,),
+        ).fetchall()
+        return [dict(row) for row in rows]
