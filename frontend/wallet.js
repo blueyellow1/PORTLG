@@ -25,7 +25,7 @@ async function api(path, options = {}) {
   };
   const response = await fetch(path, { ...options, headers });
   const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || `Backend request failed (${response.status}).`);
+  if (!response.ok && response.status !== 202) throw new Error(result.error || `Backend request failed (${response.status}).`);
   return result;
 }
 
