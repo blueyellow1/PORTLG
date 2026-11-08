@@ -1,6 +1,6 @@
-# PORTLG Wallet
+# PORTLG
 
-**A MetaMask-connected wallet interface and smart-contract security prototype for Portaldot V3 Testnet.**
+**A MetaMask-connected wallet interface and smart-contract security prototype developed by Team Wilkris for Portaldot V3 Testnet.**
 
 PORTLG brings together a browser-based wallet interface, a Flask backend for preparing transactions, and the deployed `PORTLGuardLite` smart contract. MetaMask remains responsible for account access and transaction signing.
 
@@ -159,7 +159,7 @@ Tests use an isolated local EVM and mocked or test backend components. They do n
 
 - [Automated test report](docs/TEST_REPORT.md)
 - [Test instructions](tests/README.md)
-- [GitHub Actions test run](https://github.com/blueyellow1/PORTLG/actions/runs/42174663605)
+- [GitHub Actions test run](https://github.com/blueyellow1/portaldot-hackathon-2026-portlg-wilkris/actions/runs/42174663605)
 
 ## 8. Security model and current limitations
 
@@ -174,20 +174,19 @@ Native Assets, NFTs, guardians and multi-network support are not part of the cur
 
 Read the full [Security model and limitations](docs/SECURITY.md) before evaluating the prototype.
 
-## 9. Commercial roadmap: Paid Access (planned)
+## 9. Commercial roadmap: Payment Access (planned)
 
-Paid Access is a proposed future commercial feature. **It is not implemented or enabled in the current demo**, and the current wallet does not require a trial, credits or a payment to use its existing functions.
+Payment Access is a proposed future commercial feature. **It is not implemented or enabled in the current demo**, and the current wallet does not require a trial, credits or payment to use its existing functions.
 
 The planned model is:
 
-- **Free trial:** 7 days for a new eligible wallet.
-- **Starter allowance:** 10 introductory usage credits.
-- **Top-ups:** 1 credit planned to cost 5 tPOT.
-- **Payment network:** Portaldot, with payment approval through MetaMask.
-- **Usage:** A credit would be consumed only after an eligible protected action is successfully confirmed on-chain.
-- **Payment verification:** A future release would verify the Portaldot transaction before adding credits to the wallet account.
+- **Free trial:** One month of trial access for eligible users.
+- **Trial credits:** Users will receive free credits to use the Protected Action feature during the trial. The final credit allowance and eligibility rules will be defined before launch.
+- **After credits are used:** Users will need to make a payment to continue using eligible protected actions.
+- **Premium access:** A future premium option is planned to provide additional benefits and enhanced capabilities.
+- **Payment network:** Portaldot, with payment approval through MetaMask, is the proposed direction.
 
-The intended commercial flow is for users to connect the same MetaMask wallet, receive the trial and starter credits, then purchase additional credits with tPOT when their free allowance is used. The exact eligibility, pricing and payment-verification rules will be finalized and tested before launch.
+The payment flow, credit accounting, on-chain verification, pricing and premium benefits must be implemented and tested before launch. These are roadmap plans, not existing capabilities.
 
 For clarity, the Paid Access button in the current website is informational only. It displays a coming-soon message; it does not start a trial, deduct credits, request payment or restrict the protected action. This roadmap does not modify the deployed PORTLGuardLite contract.
 
@@ -195,9 +194,14 @@ For clarity, the Paid Access button in the current website is informational only
 
 ## 10. Project links
 
-- **[Open the PORTLG browser demonstration](https://blueyellow1.github.io/PORTLG/)**
-- **[Browse the source code](https://github.com/blueyellow1/PORTLG)**
+- **[Watch the PORTLG demo video](https://youtu.be/AGvQwP2iO_c?is=fPt-t20lXXkdR7yf)**
+- **[Open the PORTLG live demonstration](https://marvelous-pudding-14d30d.netlify.app/)**
+- **[Browse the source code repository](https://github.com/blueyellow1/portaldot-hackathon-2026-portlg-wilkris)**
 - **[Browse project documentation](docs/index.html)**
+
+## 11. License
+
+This project is distributed under the **MIT License**. See the [`LICENSE`](LICENSE) file in the repository root for the complete license text.
 
 ---
 
