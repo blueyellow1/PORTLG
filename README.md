@@ -194,6 +194,8 @@ For clarity, the Paid Access button in the current website is informational only
 
 ## 10. Project links
 
+- **[PORTLG — Pitch Deck](PORTLG_Team_Wilkris_Pitch_Deck_Editable.pptx)**
+
 - **[Watch the PORTLG demo video](https://youtu.be/AGvQwP2iO_c?is=fPt-t20lXXkdR7yf)**
 - **[Open the PORTLG live demonstration](https://marvelous-pudding-14d30d.netlify.app/)**
 - **[Browse the source code repository](https://github.com/blueyellow1/portaldot-hackathon-2026-portlg-wilkris)**
