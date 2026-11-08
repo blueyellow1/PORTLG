@@ -159,7 +159,26 @@ Native Assets, NFTs, guardians and multi-network support are not part of the cur
 
 Read the full [Security model and limitations](docs/SECURITY.md) before evaluating the prototype.
 
-## 9. Project links
+## 9. Commercial roadmap: Paid Access (planned)
+
+Paid Access is a proposed future commercial feature. **It is not implemented or enabled in the current demo**, and the current wallet does not require a trial, credits or a payment to use its existing functions.
+
+The planned model is:
+
+- **Free trial:** 7 days for a new eligible wallet.
+- **Starter allowance:** 10 introductory usage credits.
+- **Top-ups:** 1 credit planned to cost 5 tPOT.
+- **Payment network:** Portaldot, with payment approval through MetaMask.
+- **Usage:** A credit would be consumed only after an eligible protected action is successfully confirmed on-chain.
+- **Payment verification:** A future release would verify the Portaldot transaction before adding credits to the wallet account.
+
+The intended commercial flow is for users to connect the same MetaMask wallet, receive the trial and starter credits, then purchase additional credits with tPOT when their free allowance is used. The exact eligibility, pricing and payment-verification rules will be finalized and tested before launch.
+
+For clarity, the Paid Access button in the current website is informational only. It displays a coming-soon message; it does not start a trial, deduct credits, request payment or restrict the protected action. This roadmap does not modify the deployed PORTLGuardLite contract.
+
+---
+
+## 10. Project links
 
 - **[Open the PORTLG browser demonstration](https://blueyellow1.github.io/PORTLG/)**
 - **[Browse the source code](https://github.com/blueyellow1/PORTLG)**
