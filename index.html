@@ -81,6 +81,12 @@
       <p id="walletAddress">Wallet not connected</p>
     </section>
 
+    <section class="panel" id="paid-access-roadmap">
+      <h2>Paid Access</h2>
+      <p class="small">Planned for a future release. Paid Access is not enabled in this demonstration.</p>
+      <button id="paidAccessBtn" type="button">Paid Access — Coming Soon</button>
+    </section>
+
     <section class="panel">
       <h2>Contract Status</h2>
       <p id="contractStatus">Not connected</p>
@@ -247,6 +253,10 @@
         status(error.shortMessage || error.message);
       }
     }
+
+    $("paidAccessBtn").onclick = () => {
+      status("Paid Access is planned for a future release and is not enabled in this demo.");
+    };
 
     $("connectBtn").onclick = connect;
     $("pauseBtn").onclick = () => transact("pause");
