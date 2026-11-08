@@ -1,569 +1,472 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PORTLG | Smart Contract Security</title>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.5/dist/ethers.umd.min.js"></script>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: #0b1220;
-      color: white;
-      text-align: center;
-    }
-    header { background: #15243d; padding: 20px; }
-    main { max-width: 650px; margin: 35px auto; padding: 15px; }
-    .panel {
-      background: #192943;
-      padding: 24px;
-      margin: 18px 0;
-      border-radius: 12px;
-    }
-    button {
-      background: #20a8e0;
-      color: white;
-      padding: 12px 18px;
-      border: none;
-      border-radius: 8px;
-      margin: 6px;
-      cursor: pointer;
-    }
-    button:disabled { opacity: .4; cursor: not-allowed; }
-    #txStatus, #walletAddress { overflow-wrap: anywhere; }
-    a { color: #6dd7ff; }
-    footer { padding: 25px; color: #aab6c9; }
+<title>PORTLG Pitch Deck</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@500;700&display=swap">
+<style>
+/* Layout concept: one full-viewport stage, slides cross-fade sideways; a control bar sits under the stage.
+   Single committed look: ink-navy ground, teal for "allowed", amber for "paused", coral for "blocked". */
+:root {
+  --bg: #0a0f1e;
+  --panel: #121a2e;
+  --panel-2: #172138;
+  --line: #243049;
+  --fg: #e8eef7;
+  --muted: #9aa9c0;
+  --teal: #36e0c2;
+  --amber: #f2b84b;
+  --coral: #ff7a6b;
+  --blue: #5aa2ff;
+  --display: "Unbounded", "Trebuchet MS", system-ui, sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bar-h: 64px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 16px; line-height: 1.5;
+  overflow: hidden; -webkit-tap-highlight-color: transparent;
+}
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; border-radius: 6px; }
 
-    /* ---------- Alert monitor ---------- */
-    #alertBanner {
-      position: sticky; top: 0; z-index: 10;
-      display: none; padding: 14px 16px;
-      background: #c0392b; color: #fff; font-weight: bold;
-      cursor: pointer;
-    }
-    #alertBanner.medium { background: #d68910; }
-    .live { display: inline-block; width: 10px; height: 10px; border-radius: 50%;
-            background: #2ecc71; margin-right: 6px; }
-    .live.off { background: #7f8c8d; }
-    .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: left; }
-    .settings label { font-size: 13px; color: #aab6c9; display: block; }
-    .settings input, .settings textarea {
-      width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px;
-      border-radius: 6px; border: 1px solid #2c4166; background: #0f1b30; color: #fff;
-    }
-    .settings .full { grid-column: 1 / -1; }
-    #alertLog { list-style: none; padding: 0; margin: 12px 0 0; text-align: left; max-height: 360px; overflow-y: auto; }
-    #alertLog li { padding: 10px; margin-bottom: 8px; border-radius: 8px; background: #0f1b30;
-                   border-left: 5px solid #7f8c8d; font-size: 13px; overflow-wrap: anywhere; }
-    #alertLog li.high { border-left-color: #e74c3c; }
-    #alertLog li.medium { border-left-color: #f39c12; }
-    #alertLog li.low { border-left-color: #3498db; }
-    .sev { font-weight: bold; text-transform: uppercase; margin-right: 6px; }
-    .small { font-size: 13px; color: #aab6c9; }
-  </style>
-</head>
-<body>
-  <div id="alertBanner" role="alert"></div>
+.progress { position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; height: 3px; background: var(--line); z-index: 20; }
+.progress i { display: block; height: 100%; width: 10%; background: var(--teal); transition: width .5s ease; }
 
-  <header>
-    <h2>🛡️ PORTLG</h2>
-    <p>Portaldot V3 Testnet</p>
-  </header>
+.stage { position: absolute; inset: 0; padding-bottom: var(--bar-h); overflow: hidden; }
+.slide {
+  position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden;
+  padding-block: 40px 24px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  opacity: 0; visibility: hidden; transform: translateX(28px);
+  transition: opacity .45s ease, transform .45s ease, visibility 0s linear .45s;
+}
+.slide[data-state="before"] { transform: translateX(-28px); }
+.slide[data-state="active"] { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.inner { max-width: 1120px; margin: 0 auto; min-height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 28px; }
 
-  <main>
-    <h1>Smart Contract Security Guardrail</h1>
-    <p>Emergency controls for blockchain operations.</p>
+.eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--teal); margin: 0; }
+h1, h2 { font-family: var(--display); font-weight: 700; line-height: 1.12; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.6rem, 9vw, 6.2rem); letter-spacing: -.02em; }
+h2 { font-size: clamp(1.5rem, 3.6vw, 2.5rem); letter-spacing: -.01em; }
+h3 { font-size: 1.1rem; margin: 0 0 6px; font-weight: 600; }
+p { margin: 0; }
+.lead { font-size: clamp(1.05rem, 2vw, 1.35rem); color: var(--muted); max-width: 62ch; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); }
+.note { font-size: 14px; color: var(--muted); max-width: 70ch; }
 
-    <section class="panel">
-      <h2>Wallet Connection</h2>
-      <button id="connectBtn">Connect MetaMask</button>
-      <p id="walletAddress">Wallet not connected</p>
-    </section>
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+.cols > * { min-width: 0; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.grid3 > * { min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.card p { color: var(--muted); font-size: 15px; }
+.tag { display: inline-block; font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+.tag.planned { color: var(--amber); border-color: rgba(242,184,75,.45); }
 
-    <section class="panel" id="paid-access-roadmap">
-      <h2>Paid Access</h2>
-      <p class="small">Planned for a future release. Paid Access is not enabled in this demonstration.</p>
-      <button id="paidAccessBtn" type="button">Paid Access — Coming Soon</button>
-    </section>
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 20px; border-radius: 10px;
+  font: 600 15px var(--body); text-decoration: none; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); cursor: pointer;
+}
+.btn:hover { border-color: var(--teal); }
+.btn.primary { background: var(--teal); border-color: var(--teal); color: #04201a; }
+.btn.primary:hover { background: #5af0d6; }
+.btn.big { padding: 16px 28px; font-size: 17px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; }
 
-    <section class="panel">
-      <h2>Contract Status</h2>
-      <p id="contractStatus">Not connected</p>
-      <p id="ownerAddress"></p>
-    </section>
+/* slide 1 */
+.hero-mark { width: 100%; max-width: 520px; justify-self: center; }
+.gate { transform-box: fill-box; transform-origin: center; animation: gate 6s ease-in-out infinite; }
+@keyframes gate { 0%, 40% { transform: translateY(-34px); } 50%, 90% { transform: translateY(0); } 100% { transform: translateY(-34px); } }
+.team { font-family: var(--mono); font-size: 14px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.team b { color: var(--fg); font-weight: 500; }
 
-    <section class="panel">
-      <h2>Security Controls</h2>
-      <button id="pauseBtn" disabled>Pause</button>
-      <button id="unpauseBtn" disabled>Unpause</button>
-      <button id="actionBtn" disabled>Protected Action</button>
-    </section>
+/* slide 4 */
+.flow { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: stretch; gap: 10px; }
+.flow > * { min-width: 0; }
+.node { border: 1.5px solid var(--line); border-radius: 14px; padding: 16px; background: var(--panel); transition: border-color .3s, background .3s; }
+.node .st { font-family: var(--display); font-size: 1rem; font-weight: 700; }
+.node .res { margin-top: 8px; font-size: 14px; font-family: var(--mono); }
+.node.allowed .res { color: var(--teal); }
+.node.blocked .res { color: var(--coral); }
+.node.on.allowed { border-color: var(--teal); background: rgba(54,224,194,.08); }
+.node.on.blocked { border-color: var(--coral); background: rgba(255,122,107,.09); }
+.arrow { align-self: center; color: var(--muted); font-family: var(--mono); font-size: 13px; text-align: center; }
+.sim { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.sim .btn { font-family: var(--mono); font-size: 14px; }
+.btn.pause { border-color: rgba(242,184,75,.6); color: var(--amber); }
+.btn.unpause { border-color: rgba(90,162,255,.6); color: var(--blue); }
+.out { font-family: var(--mono); font-size: 14px; padding: 10px 14px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); min-width: 0; flex: 1 1 260px; }
+.out.ok { color: var(--teal); }
+.out.no { color: var(--coral); }
 
-    <section class="panel">
-      <h2>Transaction Activity</h2>
-      <p id="txStatus">No transaction submitted</p>
-      <a id="txLink" target="_blank" rel="noopener" hidden>
-        View Transaction
-      </a>
-    </section>
+/* slide 5 steps */
+.steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; counter-reset: s; }
+.steps > * { min-width: 0; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 16px; }
+.step .n { font-family: var(--mono); color: var(--teal); font-size: 13px; margin-bottom: 10px; display: block; }
+.step p { font-size: 15px; color: var(--fg); }
 
-    <section class="panel">
-      <h2>🚨 Suspicious Transaction Alerts</h2>
-      <p><span id="liveDot" class="live off"></span><span id="monitorStatus">Starting monitor...</span></p>
-      <p class="small">Watches every new block on Portaldot V3 Testnet (no wallet needed) and flags suspicious sends and withdrawals.</p>
+/* slide 6 device */
+.device { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; display: grid; gap: 12px; max-width: 420px; width: 100%; justify-self: center; }
+.device .hd { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.chip { font-family: var(--mono); font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgba(54,224,194,.1); color: var(--teal); border: 1px solid rgba(54,224,194,.35); }
+.field { border: 1px dashed var(--line); border-radius: 10px; padding: 11px 13px; font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; gap: 10px; }
+.field b { color: var(--fg); font-weight: 500; }
+.fake { border-radius: 10px; padding: 11px 13px; text-align: center; font-weight: 600; font-size: 14px; }
+.fake.a { background: var(--amber); color: #2a1d00; }
+.fake.b { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); }
 
-      <button id="notifyBtn">Enable notifications</button>
-      <button id="soundBtn">Sound: ON</button>
-      <button id="monitorBtn">Pause monitoring</button>
+/* slide 7 evidence */
+.ev { display: grid; gap: 10px; }
+.ev .it { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; display: grid; grid-template-columns: 170px 1fr auto; gap: 14px; align-items: center; }
+.ev .it > * { min-width: 0; }
+.ev .k { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.ev .v { font-family: var(--mono); font-size: 14px; overflow-wrap: anywhere; }
+.copy { font: 500 12px var(--mono); padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); color: var(--fg); cursor: pointer; }
+.copy:hover { border-color: var(--teal); }
 
-      <div class="settings">
-        <div>
-          <label for="cfgValue">Large transfer threshold (native token)</label>
-          <input id="cfgValue" type="number" min="0" step="any" value="10">
-        </div>
-        <div>
-          <label for="cfgBurstCount">Rapid activity: txs from one address</label>
-          <input id="cfgBurstCount" type="number" min="2" step="1" value="5">
-        </div>
-        <div>
-          <label for="cfgBurstWindow">Within (seconds)</label>
-          <input id="cfgBurstWindow" type="number" min="5" step="1" value="60">
-        </div>
-        <div>
-          <label for="cfgNewAddr">Alert on first-time recipients above (native token)</label>
-          <input id="cfgNewAddr" type="number" min="0" step="any" value="1">
-        </div>
-        <div class="full">
-          <label for="cfgWatch">Watchlist addresses (one per line, any tx from/to them triggers an alert)</label>
-          <textarea id="cfgWatch" rows="3" placeholder="0x..."></textarea>
-        </div>
+/* slide 8 arch */
+.arch { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; align-items: stretch; }
+.arch > * { min-width: 0; }
+.blk { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px 14px; position: relative; }
+.blk .t { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; display: block; }
+.blk p { font-size: 14px; color: var(--muted); }
+.blk b { display: block; font-size: 15px; color: var(--fg); margin-bottom: 4px; }
+
+/* slide 9 */
+.road { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.road > * { min-width: 0; }
+
+/* slide 10 */
+.video { justify-self: center; width: min(100%, 300px); }
+.vframe { aspect-ratio: 9 / 16; max-height: 56vh; margin: 0 auto; width: auto; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--panel); display: grid; place-items: center; position: relative; }
+.vframe iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.vlink { text-decoration: none; display: grid; gap: 14px; justify-items: center; padding: 20px; text-align: center; }
+.play { width: 72px; height: 72px; border-radius: 50%; background: var(--teal); display: grid; place-items: center; }
+.play::after { content: ""; border-left: 22px solid #04201a; border-top: 13px solid transparent; border-bottom: 13px solid transparent; margin-left: 6px; }
+.closing { font-family: var(--display); font-size: clamp(1.1rem, 2.4vw, 1.6rem); line-height: 1.3; text-wrap: balance; }
+
+/* control bar */
+.bar {
+  position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px)); z-index: 20;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: rgba(10,15,30,.92); border-top: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+.bar .mid { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.count { font-family: var(--mono); font-size: 15px; min-width: 64px; text-align: center; }
+.ibtn { width: 42px; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: 600 18px var(--mono); cursor: pointer; display: grid; place-items: center; }
+.ibtn:hover:not(:disabled) { border-color: var(--teal); }
+.ibtn:disabled { opacity: .35; cursor: default; }
+.brand { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; color: var(--muted); }
+.hint { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+@media (max-width: 860px) {
+  .cols, .grid3, .road { grid-template-columns: 1fr; }
+  .steps { grid-template-columns: 1fr 1fr; }
+  .arch { grid-template-columns: 1fr; }
+  .flow { grid-template-columns: 1fr; }
+  .flow .arrow { transform: rotate(90deg); }
+  .ev .it { grid-template-columns: 1fr auto; }
+  .ev .k { grid-column: 1 / -1; }
+  .hint, .brand { display: none; }
+  .bar { justify-content: center; }
+  .slide { padding-top: 28px; }
+}
+@media (max-width: 480px) { .steps { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) {
+  .slide, .progress i, .node { transition: none; }
+  .gate { animation: none; }
+}
+</style>
+
+<div class="progress" aria-hidden="true"><i id="pbar"></i></div>
+
+<main class="stage" id="stage" aria-label="PORTLG presentation">
+
+<!-- 1 -->
+<section class="slide" data-state="active" id="slide-1" aria-label="Slide 1: PORTLG Wallet">
+  <div class="inner">
+    <div class="cols">
+      <div style="display:grid;gap:22px">
+        <p class="eyebrow">Portaldot Hackathon 2026</p>
+        <h1>PORTLG<br>Wallet</h1>
+        <p class="lead">Owner-controlled protection for blockchain wallet actions on Portaldot.</p>
+        <p class="team">Team <b>Wilkris</b> &nbsp;·&nbsp; Portaldot V3 Testnet</p>
       </div>
-
-      <ul id="alertLog"><li class="low"><span class="sev">info</span>No alerts yet.</li></ul>
-    </section>
-    <section class="panel" id="project-files" style="max-width:850px;margin:28px auto;text-align:left">
-      <details>
-      <summary style="cursor:pointer;text-align:center;font-size:1.25em;font-weight:bold;padding:8px">Project Review &amp; Technical Resources — Click to view</summary>
-      <p style="text-align:center">Review the live wallet demonstration, complete source repository, engineering documentation and automated test evidence.</p>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:20px">
-        <a href="https://github.com/blueyellow1/PORTLG" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>GitHub Repository</strong><br><span class="small">Complete source tree, README and project history</span></a>
-        <a href="./docs/" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Project Directory</strong><br><span class="small">Organized file index with direct navigation</span></a>
-        <a href="https://github.com/blueyellow1/PORTLG/tree/main/contracts" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Smart Contract</strong><br><span class="small">Solidity source and contract implementation</span></a>
-        <a href="https://github.com/blueyellow1/PORTLG/tree/main/frontend" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Frontend</strong><br><span class="small">Wallet interface and client-side integration</span></a>
-        <a href="https://github.com/blueyellow1/PORTLG/tree/main/backend" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Backend</strong><br><span class="small">API routes, validation and transaction preparation</span></a>
-        <a href="https://github.com/blueyellow1/PORTLG/tree/main/scripts" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Build Scripts</strong><br><span class="small">Solidity compilation and deployment utilities</span></a>
-        <a href="https://github.com/blueyellow1/PORTLG/tree/main/tests" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Automated Tests</strong><br><span class="small">Contract behavior and backend API test cases</span></a>
-        <a href="./docs/TEST_REPORT.md" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Test Execution Report</strong><br><span class="small">Recorded results for 11 automated tests</span></a>
-        <a href="./docs/ARCHITECTURE.md" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Architecture</strong><br><span class="small">System components and transaction flow</span></a>
-        <a href="./docs/SECURITY.md" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Security Model</strong><br><span class="small">Trust boundaries, controls and limitations</span></a>
-        <a href="./docs/DEPLOYMENT.md" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Deployment Record</strong><br><span class="small">Existing Portaldot V3 testnet deployment details</span></a>
-        <a href="./docs/DEMO.md" style="display:block;background:#0f1b30;border:1px solid #2c4166;border-radius:9px;padding:14px;text-decoration:none"><strong>Demo Guide</strong><br><span class="small">Steps for reviewing the wallet demonstration</span></a>
-      </div>
-      <p class="small" style="text-align:center;margin-top:18px">PORTLG is an experimental testnet project. Automated tests include local EVM and mocked backend tests; they do not represent a live-network security audit.</p>
-
-      </details>
-    </section>
-  </main>
-
-  <footer>
-    PORTLG | Testnet Demonstration
-    <p>Experimental and unaudited. Do not use real funds.</p>
-  </footer>
-
-  <script>
-    const CONTRACT_ADDRESS = "0x44406CD3e7ccE420c316D015FEE74303F16629E5";
-    const CHAIN_ID = 420420777n;
-    const EXPLORER = "https://scanner-testnet-v3.portaldot.dev";
-    const RPC_URL = "https://test-evm-rpc-v3.portaldot.dev";
-
-    const ABI = [
-      "function owner() view returns (address)",
-      "function paused() view returns (bool)",
-      "function pause()",
-      "function unpause()",
-      "function protectedAction()"
-    ];
-
-    let provider, signer, contract, wallet;
-    const $ = id => document.getElementById(id);
-
-    function status(message) {
-      $("txStatus").textContent = message;
-    }
-
-    async function refresh() {
-      const owner = await contract.owner();
-      const paused = await contract.paused();
-
-      $("contractStatus").textContent = paused ? "Paused" : "Active";
-      $("ownerAddress").textContent = "Owner: " + owner;
-
-      const isOwner = wallet.toLowerCase() === owner.toLowerCase();
-      $("pauseBtn").disabled = !isOwner || paused;
-      $("unpauseBtn").disabled = !isOwner || !paused;
-      $("actionBtn").disabled = paused;
-    }
-
-    async function connect() {
-      try {
-        if (!window.ethereum) throw Error("Install MetaMask first.");
-        if (!window.ethers) throw Error("Could not load ethers library.");
-
-        provider = new ethers.BrowserProvider(window.ethereum);
-        await provider.send("eth_requestAccounts", []);
-
-        const network = await provider.getNetwork();
-        if (network.chainId !== CHAIN_ID) {
-          throw Error("Select Portaldot V3 Testnet in MetaMask.");
-        }
-
-        signer = await provider.getSigner();
-        wallet = await signer.getAddress();
-
-        const code = await provider.getCode(CONTRACT_ADDRESS);
-        if (code === "0x") throw Error("Contract not found on this network.");
-
-        contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-        $("walletAddress").textContent = wallet;
-        await refresh();
-        status("Wallet connected.");
-      } catch (error) {
-        status(error.shortMessage || error.message);
-      }
-    }
-
-    async function transact(method) {
-      try {
-        if (!contract) throw Error("Connect MetaMask first.");
-        status("Waiting for MetaMask confirmation...");
-        $("txLink").hidden = true;
-
-        const tx = await contract[method]();
-        status("Transaction submitted: " + tx.hash);
-        $("txLink").href = EXPLORER + "/tx/" + tx.hash;
-        $("txLink").hidden = false;
-
-        const receipt = await tx.wait();
-        if (receipt.status !== 1) throw Error("Transaction failed.");
-
-        status("Transaction confirmed: " + tx.hash);
-        await refresh();
-      } catch (error) {
-        status(error.shortMessage || error.message);
-      }
-    }
-
-    $("paidAccessBtn").onclick = () => {
-      status("Paid Access is planned for a future release and is not enabled in this demo.");
-    };
-
-    $("connectBtn").onclick = connect;
-    $("pauseBtn").onclick = () => transact("pause");
-    $("unpauseBtn").onclick = () => transact("unpause");
-    $("actionBtn").onclick = () => transact("protectedAction");
-
-    if (window.ethereum) {
-      window.ethereum.on("accountsChanged", () => location.reload());
-      window.ethereum.on("chainChanged", () => location.reload());
-    }
-
-    /* =====================================================
-       SUSPICIOUS TRANSACTION MONITOR
-       Reads new blocks straight from the Portaldot RPC,
-       so it works without MetaMask and needs no contract change.
-       ===================================================== */
-    const POLL_MS = 4000;
-    const MAX_CATCHUP_BLOCKS = 25;
-    const MAX_LOG = 100;
-
-    const state = {
-      rp: null,
-      readContract: null,
-      lastBlock: null,
-      running: true,
-      sound: true,
-      busy: false,
-      pausedNow: false,
-      history: new Map(),   // sender -> [block timestamps]
-      seenAddrs: new Set(), // addresses seen as sender/recipient
-      alerted: new Set()    // dedupe key
-    };
-
-    const short = a => a ? a.slice(0, 6) + "…" + a.slice(-4) : "(contract creation)";
-    const fmt = v => {
-      const s = ethers.formatEther(v);
-      return s.length > 12 ? Number(s).toFixed(4) : s;
-    };
-
-    function loadSettings() {
-      try {
-        const s = JSON.parse(localStorage.getItem("portlgMonitor") || "{}");
-        if (s.value != null) $("cfgValue").value = s.value;
-        if (s.burstCount != null) $("cfgBurstCount").value = s.burstCount;
-        if (s.burstWindow != null) $("cfgBurstWindow").value = s.burstWindow;
-        if (s.newAddr != null) $("cfgNewAddr").value = s.newAddr;
-        if (s.watch != null) $("cfgWatch").value = s.watch;
-        if (s.sound === false) { state.sound = false; $("soundBtn").textContent = "Sound: OFF"; }
-      } catch (_) {}
-    }
-
-    function saveSettings() {
-      try {
-        localStorage.setItem("portlgMonitor", JSON.stringify({
-          value: $("cfgValue").value,
-          burstCount: $("cfgBurstCount").value,
-          burstWindow: $("cfgBurstWindow").value,
-          newAddr: $("cfgNewAddr").value,
-          watch: $("cfgWatch").value,
-          sound: state.sound
-        }));
-      } catch (_) {}
-    }
-
-    function settings() {
-      const num = (id, d) => { const n = Number(id.value); return Number.isFinite(n) && n >= 0 ? n : d; };
-      const toWei = (el, d) => {
-        try { return ethers.parseEther(String(num(el, d))); } catch (_) { return ethers.parseEther(String(d)); }
-      };
-      const watch = new Set(
-        $("cfgWatch").value.split(/\s+/).map(x => x.trim().toLowerCase()).filter(x => /^0x[0-9a-f]{40}$/.test(x))
-      );
-      return {
-        bigValue: toWei($("cfgValue"), 10),
-        newAddrValue: toWei($("cfgNewAddr"), 1),
-        burstCount: Math.max(2, Math.floor(num($("cfgBurstCount"), 5))),
-        burstWindow: Math.max(5, Math.floor(num($("cfgBurstWindow"), 60))),
-        watch
-      };
-    }
-
-    ["cfgValue", "cfgBurstCount", "cfgBurstWindow", "cfgNewAddr", "cfgWatch"].forEach(id =>
-      $(id).addEventListener("change", saveSettings));
-
-    /* ---------- Alert output ---------- */
-    let audioCtx;
-    function beep(severity) {
-      if (!state.sound) return;
-      try {
-        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-        const o = audioCtx.createOscillator();
-        const g = audioCtx.createGain();
-        o.type = "square";
-        o.frequency.value = severity === "high" ? 880 : 520;
-        g.gain.value = 0.08;
-        o.connect(g); g.connect(audioCtx.destination);
-        o.start();
-        o.stop(audioCtx.currentTime + (severity === "high" ? 0.6 : 0.25));
-      } catch (_) {}
-    }
-
-    let titleTimer;
-    function flashTitle(text) {
-      clearInterval(titleTimer);
-      let on = false, n = 0;
-      titleTimer = setInterval(() => {
-        document.title = on ? "PORTLG | Smart Contract Security" : "🚨 " + text;
-        on = !on;
-        if (++n > 12) { clearInterval(titleTimer); document.title = "PORTLG | Smart Contract Security"; }
-      }, 700);
-    }
-
-    function raise(severity, title, detail, hash) {
-      const key = severity + title + (hash || detail);
-      if (state.alerted.has(key)) return;
-      state.alerted.add(key);
-
-      const log = $("alertLog");
-      if (log.firstElementChild && log.firstElementChild.textContent.startsWith("infoNo alerts")) {
-        log.innerHTML = "";
-      }
-
-      const li = document.createElement("li");
-      li.className = severity;
-      const sev = document.createElement("span");
-      sev.className = "sev";
-      sev.textContent = severity;
-      li.appendChild(sev);
-      li.appendChild(document.createTextNode(title + " — " + detail + " "));
-      if (hash) {
-        const a = document.createElement("a");
-        a.href = EXPLORER + "/tx/" + hash;
-        a.target = "_blank";
-        a.rel = "noopener";
-        a.textContent = "[view tx]";
-        li.appendChild(a);
-      }
-      log.insertBefore(li, log.firstChild);
-      while (log.children.length > MAX_LOG) log.removeChild(log.lastChild);
-
-      if (severity === "high" || severity === "medium") {
-        const b = $("alertBanner");
-        b.className = severity === "medium" ? "medium" : "";
-        b.textContent = "🚨 " + title + " — " + detail + " (click to dismiss)";
-        b.style.display = "block";
-        beep(severity);
-        flashTitle(title);
-        if ("Notification" in window && Notification.permission === "granted") {
-          try { new Notification("PORTLG: " + title, { body: detail }); } catch (_) {}
-        }
-      }
-    }
-
-    $("alertBanner").onclick = () => { $("alertBanner").style.display = "none"; };
-
-    /* ---------- Detection rules ---------- */
-    function analyze(tx, block, cfg) {
-      const from = (tx.from || "").toLowerCase();
-      const to = tx.to ? tx.to.toLowerCase() : null;
-      const value = tx.value || 0n;
-      const ts = Number(block.timestamp);
-      const info = `${short(tx.from)} → ${short(tx.to)} · ${fmt(value)} · block ${block.number}`;
-
-      // 1. Large transfer / withdrawal
-      if (value >= cfg.bigValue) {
-        raise("high", "Large transfer", info, tx.hash);
-      }
-
-      // 2. Rapid activity from the same address
-      const arr = (state.history.get(from) || []).filter(t => ts - t <= cfg.burstWindow);
-      arr.push(ts);
-      state.history.set(from, arr);
-      if (arr.length >= cfg.burstCount) {
-        raise("high", "Rapid activity",
-          `${short(tx.from)} sent ${arr.length} txs in ${cfg.burstWindow}s`, tx.hash);
-      }
-
-      // 3. Watchlist
-      if (cfg.watch.has(from) || (to && cfg.watch.has(to))) {
-        raise("high", "Watchlist address active", info, tx.hash);
-      }
-
-      // 4. Money moved to a brand-new address
-      if (to && value >= cfg.newAddrValue && !state.seenAddrs.has(to)) {
-        raise("medium", "Funds sent to new address", info, tx.hash);
-      }
-      state.seenAddrs.add(from);
-      if (to) state.seenAddrs.add(to);
-
-      // 5. Interaction with PORTLG while it is paused
-      if (to === CONTRACT_ADDRESS.toLowerCase() && state.pausedNow) {
-        raise("medium", "Call to PORTLG while paused", info, tx.hash);
-      }
-
-      // 6. Contract creation
-      if (!to) {
-        raise("low", "New contract deployed", `by ${short(tx.from)} · block ${block.number}`, tx.hash);
-      }
-    }
-
-    async function checkFailedContractCall(tx) {
-      try {
-        if (!tx.to || tx.to.toLowerCase() !== CONTRACT_ADDRESS.toLowerCase()) return;
-        const r = await state.rp.getTransactionReceipt(tx.hash);
-        if (r && r.status === 0) {
-          raise("medium", "Failed PORTLG call",
-            `${short(tx.from)} · possible blocked or attack attempt`, tx.hash);
-        }
-      } catch (_) {}
-    }
-
-    /* ---------- Block polling ---------- */
-    function setMonitor(text, ok) {
-      $("monitorStatus").textContent = text;
-      $("liveDot").className = "live" + (ok ? "" : " off");
-    }
-
-    async function poll() {
-      if (!state.running || state.busy) return;
-      state.busy = true;
-      try {
-        const latest = await state.rp.getBlockNumber();
-        if (state.lastBlock === null) state.lastBlock = latest - 1;
-
-        try { state.pausedNow = await state.readContract.paused(); } catch (_) {}
-
-        let from = state.lastBlock + 1;
-        if (latest - from + 1 > MAX_CATCHUP_BLOCKS) from = latest - MAX_CATCHUP_BLOCKS + 1;
-
-        const cfg = settings();
-        for (let n = from; n <= latest; n++) {
-          const block = await state.rp.getBlock(n, true);
-          if (!block) break;
-          for (const tx of (block.prefetchedTransactions || [])) {
-            analyze(tx, block, cfg);
-            await checkFailedContractCall(tx);
-          }
-          state.lastBlock = n;
-        }
-        setMonitor(`Live · block ${state.lastBlock} · contract ${state.pausedNow ? "PAUSED" : "active"}`, true);
-      } catch (e) {
-        setMonitor("RPC error: " + (e.shortMessage || e.message), false);
-      } finally {
-        state.busy = false;
-      }
-    }
-
-    function startMonitor() {
-      if (!window.ethers) { setMonitor("Could not load ethers library.", false); return; }
-      const net = new ethers.Network("portaldot-v3-testnet", CHAIN_ID);
-      state.rp = new ethers.JsonRpcProvider(RPC_URL, net, { staticNetwork: net });
-      state.readContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, state.rp);
-      setInterval(poll, POLL_MS);
-      poll();
-    }
-
-    $("monitorBtn").onclick = () => {
-      state.running = !state.running;
-      $("monitorBtn").textContent = state.running ? "Pause monitoring" : "Resume monitoring";
-      if (!state.running) setMonitor("Monitoring paused", false); else poll();
-    };
-
-    $("soundBtn").onclick = () => {
-      state.sound = !state.sound;
-      $("soundBtn").textContent = "Sound: " + (state.sound ? "ON" : "OFF");
-      if (state.sound) beep("medium");
-      saveSettings();
-    };
-
-    $("notifyBtn").onclick = async () => {
-      if (!("Notification" in window)) { $("notifyBtn").textContent = "Not supported"; return; }
-      const p = await Notification.requestPermission();
-      $("notifyBtn").textContent = p === "granted" ? "Notifications ON" : "Notifications blocked";
-    };
-
-    loadSettings();
-    startMonitor();
-  </script>
-
-<section id="portlg-wallet" style="background:#101b35;color:white;padding:25px;border-radius:16px;margin:25px auto;max-width:850px;font-family:Arial">
-<h2>PORTLG Wallet</h2>
-<p>Secure Multi-Network Wallet</p>
-
-<div style="padding:15px;background:#1c2b4b;border-radius:10px">
-<h3>Wallet Balance</h3>
-<h2 id="plgBalance">--</h2>
-<p id="plgNetwork">Network: Not connected</p>
-<p id="plgAddress" style="word-break:break-all">No wallet connected</p>
-<button id="plgConnect">Connect Wallet</button>
-</div>
-
-<hr>
-<h3>Send Crypto</h3>
-<input id="plgRecipient" placeholder="Recipient wallet address" style="width:95%;padding:12px;margin:5px">
-<input id="plgAmount" type="number" min="0" step="any" placeholder="Amount in tPOT" style="width:95%;padding:12px;margin:5px">
-<p id="plgAlert" role="alert" style="color:#ff7777"></p>
-<button id="plgSend">Send Transaction</button>
-
-<hr>
-<h3>Receive Crypto</h3>
-<button id="plgCopy">Copy My Address</button>
-
-<hr>
-<h3>Transaction History</h3>
-<div id="plgHistory">No transactions yet.</div>
+      <svg class="hero-mark" viewBox="0 0 520 300" role="img" aria-label="Three linked blocks with a gate that opens and closes between them">
+        <rect x="20" y="105" width="120" height="90" rx="14" fill="#121a2e" stroke="#36e0c2" stroke-width="2"/>
+        <rect x="380" y="105" width="120" height="90" rx="14" fill="#121a2e" stroke="#36e0c2" stroke-width="2"/>
+        <rect x="205" y="105" width="110" height="90" rx="14" fill="#172138" stroke="#243049" stroke-width="2"/>
+        <line x1="140" y1="150" x2="205" y2="150" stroke="#36e0c2" stroke-width="3"/>
+        <line x1="315" y1="150" x2="380" y2="150" stroke="#36e0c2" stroke-width="3" stroke-dasharray="6 7"/>
+        <g class="gate"><rect x="251" y="72" width="18" height="156" rx="6" fill="#f2b84b"/></g>
+        <text x="80" y="156" text-anchor="middle" fill="#e8eef7" font-family="IBM Plex Mono, monospace" font-size="14">wallet</text>
+        <text x="440" y="156" text-anchor="middle" fill="#e8eef7" font-family="IBM Plex Mono, monospace" font-size="14">action</text>
+        <text x="260" y="262" text-anchor="middle" fill="#9aa9c0" font-family="IBM Plex Mono, monospace" font-size="14">paused ? blocked : allowed</text>
+      </svg>
+    </div>
+  </div>
 </section>
 
-<script src="wallet.js"></script>
-</body>
-</html>
+<!-- 2 -->
+<section class="slide" id="slide-2" aria-label="Slide 2: The problem">
+  <div class="inner">
+    <p class="eyebrow">The problem</p>
+    <h2>Sensitive actions need a say in when they run</h2>
+    <p class="lead">Users need better control over when protected smart-contract actions can execute. Wallet interfaces and contract-level controls should work together.</p>
+    <div class="grid3">
+      <div class="card"><h3>Visibility</h3><p>Alerts and warnings tell a user something is wrong. They do not decide whether an action runs.</p></div>
+      <div class="card"><h3>Control</h3><p>A protected operation needs a clear way to be suspended when execution should stop.</p></div>
+      <div class="card"><h3>Verifiability</h3><p>The control should live in the contract, so its state and history can be inspected on-chain.</p></div>
+    </div>
+    <p class="note">PORTLG addresses one specific control. It does not claim to solve every blockchain security problem.</p>
+  </div>
+</section>
+
+<!-- 3 -->
+<section class="slide" id="slide-3" aria-label="Slide 3: The solution">
+  <div class="inner">
+    <p class="eyebrow">The solution</p>
+    <h2>PORTLG Wallet: a wallet interface with an owner-controlled guard</h2>
+    <p class="lead">A wallet interface combined with an owner-controlled smart-contract protection mechanism on Portaldot V3 Testnet.</p>
+    <div class="grid3">
+      <div class="card"><h3>Wallet connection</h3><p>Connect MetaMask and see which account is in use.</p></div>
+      <div class="card"><h3>Network validation</h3><p>The interface checks the network and gives feedback when it is not Portaldot V3 Testnet.</p></div>
+      <div class="card"><h3>Balance and transactions</h3><p>View the tPOT balance and prepare supported transactions.</p></div>
+    </div>
+    <p class="note">MetaMask stays responsible for private keys and for signing every transaction.</p>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide" id="slide-4" aria-label="Slide 4: Protected Action, the core feature">
+  <div class="inner">
+    <p class="eyebrow">Core feature</p>
+    <h2>Protected Action: the contract decides when it runs</h2>
+    <p class="lead"><span class="mono">protectedAction()</span> executes when the contract is not paused. The owner calls <span class="mono">pause()</span> to block it and <span class="mono">unpause()</span> to restore it.</p>
+    <div class="flow" id="flow">
+      <div class="node allowed on" data-n="0"><div class="st">Active</div><div class="mono muted" style="font-size:13px">paused = false</div><div class="res">Protected Action allowed</div></div>
+      <div class="arrow">pause()<br>→</div>
+      <div class="node blocked" data-n="1"><div class="st">Paused</div><div class="mono muted" style="font-size:13px">paused = true</div><div class="res">Protected Action blocked</div></div>
+      <div class="arrow">unpause()<br>→</div>
+      <div class="node allowed" data-n="2"><div class="st">Unpaused</div><div class="mono muted" style="font-size:13px">paused = false</div><div class="res">Protected Action allowed</div></div>
+    </div>
+    <div class="sim">
+      <button class="btn pause" id="b-pause" type="button">pause()</button>
+      <button class="btn unpause" id="b-unpause" type="button">unpause()</button>
+      <button class="btn" id="b-act" type="button">protectedAction()</button>
+      <div class="out" id="sim-out" role="status">Try it: call protectedAction() while the contract is active.</div>
+    </div>
+    <p class="note">Interactive illustration of the contract logic. Real calls happen as transactions on Portaldot V3 Testnet.</p>
+  </div>
+</section>
+
+<!-- 5 -->
+<section class="slide" id="slide-5" aria-label="Slide 5: How it works">
+  <div class="inner">
+    <p class="eyebrow">How it works</p>
+    <h2>From wallet to verified result in five steps</h2>
+    <div class="steps">
+      <div class="step"><span class="n">STEP 1</span><p>The user connects a wallet.</p></div>
+      <div class="step"><span class="n">STEP 2</span><p>The wallet interacts with Portaldot V3 Testnet.</p></div>
+      <div class="step"><span class="n">STEP 3</span><p>The owner controls the contract's pause state.</p></div>
+      <div class="step"><span class="n">STEP 4</span><p>Protected Action checks the contract state before it runs.</p></div>
+      <div class="step"><span class="n">STEP 5</span><p>Transaction results can be verified on the blockchain explorer.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 -->
+<section class="slide" id="slide-6" aria-label="Slide 6: Live demo">
+  <div class="inner">
+    <div class="cols">
+      <div style="display:grid;gap:20px">
+        <p class="eyebrow">Live demo</p>
+        <h2>Try the PORTLG wallet yourself</h2>
+        <p class="lead">This button opens the live wallet demo in a new tab.</p>
+        <div class="row"><a class="btn primary big" href="https://marvelous-pudding-14d30d.netlify.app/" target="_blank" rel="noopener">Open live wallet demo ↗</a></div>
+        <p class="note">You will need MetaMask set to Portaldot V3 Testnet (Chain ID 420420777).</p>
+      </div>
+      <div class="device" aria-label="Outline of the wallet interface">
+        <div class="hd"><b>PORTLG Wallet</b><span class="chip">Chain 420420777</span></div>
+        <div class="field"><span>Network</span><b>Portaldot V3 Testnet</b></div>
+        <div class="field"><span>Balance</span><b>tPOT</b></div>
+        <div class="fake a">Connect MetaMask</div>
+        <div class="fake b">Send tPOT</div>
+        <div class="note" style="font-size:12px">Interface outline. The real app is in the live demo.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide" id="slide-7" aria-label="Slide 7: Smart contract and on-chain evidence">
+  <div class="inner">
+    <p class="eyebrow">On-chain evidence</p>
+    <h2>PORTLGuardLite is deployed on Portaldot V3 Testnet</h2>
+    <div class="ev">
+      <div class="it"><span class="k">Contract</span><span class="v">PORTLGuardLite</span><span></span></div>
+      <div class="it"><span class="k">Network</span><span class="v">Portaldot V3 Testnet · Chain ID 420420777</span><span></span></div>
+      <div class="it"><span class="k">Address</span><span class="v" id="v-addr">0x44406CD3e7ccE420c316D015FEE74303F16629E5</span><button class="copy" type="button" data-copy="v-addr">Copy</button></div>
+      <div class="it"><span class="k">Deployment block</span><span class="v">200580</span><span></span></div>
+      <div class="it"><span class="k">Deployment tx</span><span class="v" id="v-tx">0x6115a0880f1822ba7b43c5b0461323eaebab701f12ce22b81325a3d2b1e5d879</span><button class="copy" type="button" data-copy="v-tx">Copy</button></div>
+    </div>
+    <div class="row"><a class="btn" href="https://scanner-testnet-v3.portaldot.dev/" target="_blank" rel="noopener">Open testnet explorer ↗</a></div>
+    <p class="note">Paste the address or transaction hash into the explorer to verify them. This is a testnet deployment and has not been audited.</p>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide" id="slide-8" aria-label="Slide 8: Technology">
+  <div class="inner">
+    <p class="eyebrow">Technology</p>
+    <h2>Five pieces, each with one job</h2>
+    <div class="arch">
+      <div class="blk"><span class="t">Interface</span><b>Wallet interface</b><p>Shows network, balance and supported actions.</p></div>
+      <div class="blk"><span class="t">Wallet</span><b>MetaMask</b><p>Holds private keys and signs transactions.</p></div>
+      <div class="blk"><span class="t">Contract</span><b>PORTLGuardLite</b><p>Stores the paused flag and enforces Protected Action.</p></div>
+      <div class="blk"><span class="t">Chain</span><b>Portaldot V3 Testnet</b><p>Executes and records every transaction.</p></div>
+      <div class="blk"><span class="t">Proof</span><b>On-chain verification</b><p>Receipts and events can be checked on the explorer.</p></div>
+    </div>
+    <p class="note">Private keys never leave the user's wallet. The interface prepares transactions; MetaMask asks the user to review and sign.</p>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" id="slide-9" aria-label="Slide 9: What's next">
+  <div class="inner">
+    <p class="eyebrow">What's next</p>
+    <h2>Roadmap, clearly separate from what is built</h2>
+    <div class="road">
+      <div class="card"><span class="tag planned">Planned</span><h3 style="margin-top:12px">Better wallet experience</h3><p>Clearer states and smoother transaction flows.</p></div>
+      <div class="card"><span class="tag planned">Planned</span><h3 style="margin-top:12px">Broader network support</h3><p>Work beyond a single testnet.</p></div>
+      <div class="card"><span class="tag planned">Planned</span><h3 style="margin-top:12px">More integrations</h3><p>More wallets and smart-contract integrations.</p></div>
+      <div class="card"><span class="tag planned">Planned</span><h3 style="margin-top:12px">Premium access</h3><p>An initial free trial with credits.</p></div>
+    </div>
+    <p class="note">Paid access is not currently implemented. Every item on this slide is a plan, not a feature of the current release.</p>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" id="slide-10" aria-label="Slide 10: The ask">
+  <div class="inner">
+    <div class="cols">
+      <div style="display:grid;gap:20px">
+        <p class="eyebrow">The ask</p>
+        <h2>Bringing owner-controlled protection to blockchain wallets</h2>
+        <div class="row">
+          <a class="btn primary" href="https://github.com/blueyellow1/portaldot-hackathon-2026-portlg-wilkris" target="_blank" rel="noopener">GitHub repository ↗</a>
+          <a class="btn" href="https://marvelous-pudding-14d30d.netlify.app/" target="_blank" rel="noopener">Live wallet demo ↗</a>
+          <a class="btn" href="https://youtube.com/shorts/R1LaKYAD-oA" target="_blank" rel="noopener">Open video on YouTube ↗</a>
+        </div>
+        <p class="closing">PORTLG — Building a more controlled wallet experience on Portaldot.</p>
+        <p class="muted">Thank you — Team Wilkris.</p>
+      </div>
+      <div class="video">
+        <div class="vframe"><iframe src="https://www.youtube.com/embed/R1LaKYAD-oA" title="PORTLG demo video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen loading="lazy"></iframe></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<nav class="bar" aria-label="Slide navigation">
+  <span class="brand">PORTLG · TEAM WILKRIS</span>
+  <div class="mid">
+    <button class="ibtn" id="prev" type="button" aria-label="Previous slide">←</button>
+    <span class="count" id="count" aria-live="polite">1 / 10</span>
+    <button class="ibtn" id="next" type="button" aria-label="Next slide">→</button>
+    <button class="ibtn" id="fs" type="button" aria-label="Toggle full screen" title="Full screen (F)">⛶</button>
+  </div>
+  <span class="hint">← → · Space · F</span>
+</nav>
+
+<script>
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var N = slides.length, cur = 0;
+  var pbar = document.getElementById('pbar'), count = document.getElementById('count');
+  var prev = document.getElementById('prev'), next = document.getElementById('next');
+
+  function show(i, pushHash) {
+    cur = Math.max(0, Math.min(N - 1, i));
+    slides.forEach(function (s, k) {
+      s.setAttribute('data-state', k === cur ? 'active' : (k < cur ? 'before' : 'after'));
+      s.setAttribute('aria-hidden', k === cur ? 'false' : 'true');
+      if (k === cur) s.scrollTop = 0;
+    });
+    count.textContent = (cur + 1) + ' / ' + N;
+    pbar.style.width = ((cur + 1) / N * 100) + '%';
+    prev.disabled = cur === 0; next.disabled = cur === N - 1;
+    if (pushHash !== false) { try { history.replaceState(null, '', '#slide-' + (cur + 1)); } catch (e) { location.hash = 'slide-' + (cur + 1); } }
+  }
+  function go(d) { show(cur + d); }
+  function fromHash() { var m = /^#slide-(\d+)$/.exec(location.hash); return m ? parseInt(m[1], 10) - 1 : 0; }
+
+  prev.addEventListener('click', function (e) { e.stopPropagation(); go(-1); });
+  next.addEventListener('click', function (e) { e.stopPropagation(); go(1); });
+
+  document.getElementById('stage').addEventListener('click', function (e) {
+    if (e.target.closest('a, button, .copy, input, select, textarea')) return;
+    if (window.getSelection && String(window.getSelection())) return;
+    var x = e.clientX / window.innerWidth;
+    go(x < 0.33 ? -1 : 1);
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('input, textarea, select')) return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'PageDown') { e.preventDefault(); go(1); }
+    else if (k === ' ' || k === 'Spacebar') { if (e.target.closest && e.target.closest('button, a')) return; e.preventDefault(); go(e.shiftKey ? -1 : 1); }
+    else if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); go(-1); }
+    else if (k === 'Home') { show(0); }
+    else if (k === 'End') { show(N - 1); }
+    else if (k === 'f' || k === 'F') { toggleFs(); }
+  });
+
+  var tx = null, ty = null;
+  document.addEventListener('touchstart', function (e) { var t = e.changedTouches[0]; tx = t.clientX; ty = t.clientY; }, { passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (tx === null) return; var t = e.changedTouches[0], dx = t.clientX - tx, dy = t.clientY - ty; tx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) go(dx < 0 ? 1 : -1);
+  }, { passive: true });
+
+  window.addEventListener('hashchange', function () { show(fromHash(), false); });
+
+  var fsBtn = document.getElementById('fs');
+  function toggleFs() {
+    try {
+      if (document.fullscreenElement) { document.exitFullscreen(); }
+      else if (document.documentElement.requestFullscreen) { var p = document.documentElement.requestFullscreen(); if (p && p.catch) p.catch(function () {}); }
+    } catch (e) {}
+  }
+  if (!document.fullscreenEnabled) fsBtn.hidden = true;
+  fsBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFs(); });
+
+  // copy buttons
+  Array.prototype.forEach.call(document.querySelectorAll('.copy'), function (b) {
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var el = document.getElementById(b.getAttribute('data-copy')), txt = el.textContent.trim();
+      function sel() { var r = document.createRange(); r.selectNodeContents(el); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = 'Selected'; }
+      function done() { b.textContent = 'Copied'; setTimeout(function () { b.textContent = 'Copy'; }, 1600); }
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(txt).then(done, sel); } else { sel(); }
+    });
+  });
+
+  // protected action illustration
+  var paused = false, nodes = document.querySelectorAll('#flow .node'), out = document.getElementById('sim-out');
+  function mark(n) { Array.prototype.forEach.call(nodes, function (el) { el.classList.toggle('on', +el.getAttribute('data-n') === n); }); }
+  function say(t, cls) { out.textContent = t; out.className = 'out ' + (cls || ''); }
+  document.getElementById('b-pause').addEventListener('click', function (e) { e.stopPropagation(); paused = true; mark(1); say('pause() called. paused = true. Protected Action is now blocked.', 'no'); });
+  document.getElementById('b-unpause').addEventListener('click', function (e) { e.stopPropagation(); paused = false; mark(2); say('unpause() called. paused = false. Protected Action is allowed again.', 'ok'); });
+  document.getElementById('b-act').addEventListener('click', function (e) { e.stopPropagation(); if (paused) say('protectedAction() reverted: the contract is paused.', 'no'); else say('protectedAction() executed: the contract is active.', 'ok'); });
+
+  show(fromHash(), false);
+})();
+</script>
