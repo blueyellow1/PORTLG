@@ -98,31 +98,46 @@ See [Network configuration](docs/NETWORK.md) and [Deployment record](docs/DEPLOY
 
 ## 5. Repository structure
 
-The repository is grouped by implementation area and supporting evidence:
+The repository keeps the public browser demo, application source, smart contract, development utilities, tests and supporting evidence in clearly separated locations.
 
 ```text
 PORTLG/
-├── index.html                 # Browser demonstration entry point
-├── wallet.js                  # Browser-side wallet interaction
+├── README.md
+├── LICENSE
+├── .gitignore
+├── index.html                    # Public GitHub Pages demonstration
+├── requirements.txt              # Python and test dependencies
 ├── contracts/
-│   └── PORTLGuardLite.sol     # Solidity contract
-├── frontend/                  # Frontend application
-├── backend/                   # Flask API
-├── scripts/                   # Contract compilation and deployment utilities
-├── tests/                     # Automated tests
-│   └── README.md              # Test setup and scope
+│   └── PORTLGuardLite.sol         # Deployed Solidity contract source
+├── frontend/
+│   ├── index.html                 # Frontend served by the Flask application
+│   └── wallet.js                  # MetaMask and contract interaction
+├── backend/
+│   ├── app.py                     # Flask API and transaction preparation
+│   └── requirements.txt           # Backend runtime dependencies
+├── scripts/
+│   ├── compile_contract.py        # Reproducible Solidity compilation
+│   └── deploy.py                  # Local-development deployment utility
+├── tests/
+│   ├── README.md                  # Test instructions and scope
+│   ├── test_portlguardlite.py     # Local EVM contract tests
+│   └── test_backend_api.py        # Backend API tests
 ├── docs/
-│   ├── index.html             # Documentation directory
-│   ├── ARCHITECTURE.md        # System design and data flow
-│   ├── NETWORK.md             # Testnet configuration
-│   ├── DEPLOYMENT.md          # Deployment record
-│   ├── SECURITY.md            # Security model and limitations
-│   ├── DEMO.md                # Demonstration procedure
-│   └── TEST_REPORT.md         # Automated test results
-└── requirements.txt           # Python dependencies
+│   ├── index.html                 # Documentation index
+│   ├── ARCHITECTURE.md            # System design and data flow
+│   ├── NETWORK.md                 # Portaldot V3 configuration
+│   ├── DEPLOYMENT.md              # Existing deployment evidence
+│   ├── SECURITY.md                # Security model and limitations
+│   ├── DEMO.md                    # Demonstration procedure
+│   └── TEST_REPORT.md             # Recorded automated test report
+└── .github/
+    └── workflows/
+        └── contract-tests.yml     # Automated contract/backend test workflow
 ```
 
-Open the [documentation directory](docs/index.html) to browse the supporting project documents.
+The root `index.html` is the static GitHub Pages demonstration. The `frontend/` application is served by the Flask backend during local or hosted backend deployment. These are separate entry points; the Flask API is not provided by GitHub Pages.
+
+Open the [documentation index](docs/index.html) for the detailed technical records.
 
 ## 6. Run locally
 
